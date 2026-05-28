@@ -263,7 +263,7 @@ body{font-family:'Inter',sans-serif;background:#fff;color:var(--gray-900);line-h
 .excl-sec{background:var(--gray-50);padding-top:0}
 .excl-list{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:9px;margin-top:20px}
 .excl-list li{display:flex;align-items:flex-start;gap:8px;font-size:13.5px;color:var(--gray-500)}
-.excl-list li::before{content:'\2715';color:#f87171;font-weight:700;flex-shrink:0}
+.excl-list li::before{content:'\\2715';color:#f87171;font-weight:700;flex-shrink:0}
 
 /* CTA strip */
 .cta-strip{background:var(--gray-900);padding:52px 32px;text-align:center}
