@@ -75,12 +75,13 @@ Return this exact JSON structure:
       "description": "Full resort marketing description verbatim",
       "inclusions": ["inclusion 1", "inclusion 2"],
       "addedValue": ["added value item if present"],
+      "flightDetails": "Flight details specific to this option — departure city, flight numbers, times, dates, luggage allowance. Use 'See flight details below' if flights are shared across all options and listed separately.",
       "pricePerPerson": "R00,000.00",
       "totalPrice": "R00,000.00",
       "totalPax": "number of pax for this price if stated"
     }
   ],
-  "flightDetails": "Full flight info as readable paragraph or empty string if none",
+  "flightDetails": "Shared flight information that applies to ALL options (only populate if flights are not option-specific). Leave empty string if each option has its own flightDetails.",
   "exclusions": ["exclusion 1", "exclusion 2"]
 }
 
@@ -89,6 +90,7 @@ Rules:
 - Each inclusion as its own array item
 - If multiple room types for same resort, create separate options
 - Omit price fields if not found (no placeholders)
+- FLIGHT DETAILS: Always extract flight information. If each option has different flights, put them in options[].flightDetails. If all options share the same flights, put them in the top-level flightDetails and set each option's flightDetails to "See flight details below". Never omit flight info — it is critical for the client.
 - IMPORTANT: Do NOT mention the supplier, wholesaler, booking platform or distributor name anywhere (e.g. "AFS", "Afristay", "Tourvest", "Thompsons", "Club Travel" etc). This is an IziTravel client-facing quote — the client must only see IziTravel as the source
 - Strip any booking reference codes, agent codes, or internal identifiers from the output
 - resortName should be ONLY the resort/hotel name and star rating — no supplier branding

@@ -107,6 +107,16 @@ function buildQuoteHTML(data, logoBase64) {
 
     const factsRow = factPills ? `<div class="opt-facts">${factPills}</div>` : '';
 
+    // Per-option flight details
+    const optFlightHTML = (opt.flightDetails && opt.flightDetails !== 'See flight details below')
+      ? `<div class="opt-flight">
+          <div class="opt-flight-title">&#9992; Flight Details</div>
+          <div class="opt-flight-body">${esc(opt.flightDetails).replace(/\n/g, '<br>')}</div>
+        </div>`
+      : (opt.flightDetails === 'See flight details below'
+          ? `<div class="opt-flight opt-flight-ref">&#9992; See flight details below</div>`
+          : '');
+
     // Description — collapsible, secondary
     const descHTML = opt.description
       ? `<details class="desc-details">
@@ -140,6 +150,7 @@ function buildQuoteHTML(data, logoBase64) {
       <ul class="incl-list">${inclHTML}</ul>
     </div>
     ${addedHTML}
+    ${optFlightHTML}
     ${descHTML}
     <button class="select-btn" data-opt="${optDataAttr}">Select This Package &#8594;</button>
   </div>
@@ -271,6 +282,12 @@ body{font-family:'Inter',sans-serif;background:#fff;color:var(--gray-900);line-h
 .added-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px}
 .added-title{font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px}
 .added-box ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+
+/* Per-option flight details */
+.opt-flight{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px}
+.opt-flight-ref{background:var(--gray-50);border-color:var(--gray-200);color:var(--gray-500);font-size:13px;font-style:italic}
+.opt-flight-title{font-size:11px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.opt-flight-body{font-size:13px;color:#0c4a6e;line-height:1.75}
 
 /* Collapsible description */
 .desc-details{border:1px solid var(--gray-200);border-radius:9px;overflow:hidden}

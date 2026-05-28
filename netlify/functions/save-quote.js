@@ -55,10 +55,11 @@ exports.handler = async (event) => {
       body: JSON.stringify({ quoteId, quoteUrl, updated: !!existingId }),
     };
   } catch (err) {
+    const msg = (err && (err.message || err.toString())) || 'Failed to save quote.';
     return {
       statusCode: 500,
       headers: { ...cors, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: err.message || 'Failed to save quote.' }),
+      body: JSON.stringify({ error: msg }),
     };
   }
 };

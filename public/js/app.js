@@ -175,16 +175,17 @@ const App = (() => {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(body),
       });
-      const data = await res.json();
+      let data = {};
+      try { data = await res.json(); } catch { data = { error: `HTTP ${res.status} — non-JSON response` }; }
       if (data.quoteUrl) {
         state.quoteUrl    = data.quoteUrl;
         state.editQuoteId = data.quoteId;   // store UUID for subsequent updates
         if (!silent) setQuoteLink(data.quoteUrl);
       } else {
-        if (!silent) setQuoteLinkError(data.error || 'Could not generate link');
+        if (!silent) setQuoteLinkError(data.error || `HTTP ${res.status} — no URL returned`);
       }
     } catch (err) {
-      if (!silent) setQuoteLinkError(err.message || 'Could not generate link');
+      if (!silent) setQuoteLinkError((err && (err.message || String(err))) || 'Network error');
     }
   }
 
