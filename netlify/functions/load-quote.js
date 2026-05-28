@@ -23,9 +23,6 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors, body: '' };
   if (event.httpMethod !== 'GET')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
 
-  // Initialise Netlify Blobs context for v1 functions
-  store.init(event);
-
   const quoteId = event.queryStringParameters?.id;
   if (!quoteId) {
     return {

@@ -23,18 +23,15 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors, body: '' };
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
 
-  // Initialise Netlify Blobs context for v1 functions (reads from event.blobs)
-  store.init(event);
-
   try {
     const { quoteData, logoBase64, quoteId: existingId } = JSON.parse(event.body);
     if (!quoteData) throw new Error('quoteData is required');
 
-    // If an existing ID is provided, update that record; otherwise create a new one
-    const quoteId = existingId || uuidv4();
+    // existingId is a gist ID for updates, or undefined for new quotes
+    const inputId = existingId || uuidv4();
 
     const record = {
-      quoteId,
+      quoteId: inputId,
       quoteData,
       logoBase64: logoBase64 || null,
       createdAt:  new Date().toISOString(),
@@ -43,7 +40,9 @@ exports.handler = async (event) => {
       dates:       quoteData.dates       || '',
     };
 
-    await store.setJSON(quoteId, record);
+    // setJSON returns the actual storage key (gist ID in prod, may differ from inputId for new quotes)
+    const actualId = await store.setJSON(inputId, record);
+    const quoteId  = actualId || inputId;
 
     // Build the public view URL
     const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'http://localhost:3002';
