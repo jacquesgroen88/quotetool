@@ -81,7 +81,7 @@ The `.env` is gitignored and auto-loaded by the functions via a built-in loader 
 | Variable | Where to set | Purpose |
 |---|---|---|
 | `OPENROUTER_API_KEY` | `.env` locally, Netlify dashboard in prod | AI API calls via OpenRouter |
-| `ADMIN_PASSWORD` | `.env` locally, Netlify dashboard in prod | Protects `/admin.html` quote list |
+| `ADMIN_PASSWORD` | `.env` locally, Netlify dashboard in prod | Protects `/admin.html` quote list — currently set to `Reviewtap` |
 
 **In Netlify dashboard:** Site configuration → Environment variables → Add variable
 
@@ -277,7 +277,7 @@ Shows:
 - [x] Repo: https://github.com/jacquesgroen88/quotetool
 - [x] Netlify site: https://izitravelquotes.netlify.app/
 - [ ] Set `OPENROUTER_API_KEY` in Netlify env vars
-- [ ] Set `ADMIN_PASSWORD` in Netlify env vars
+- [ ] Set `ADMIN_PASSWORD=Reviewtap` in Netlify env vars
 - [ ] Upgrade to Netlify Pro for 26s function timeout (Sonnet needs ~25s)
 
 **Auto-deploy:** Every `git push` to `main` triggers a Netlify deploy automatically.

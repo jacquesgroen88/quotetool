@@ -174,10 +174,17 @@ const App = (() => {
       if (data.quoteUrl) {
         state.quoteUrl = data.quoteUrl;
         setQuoteLink(data.quoteUrl);
+      } else {
+        setQuoteLinkError(data.error || 'Could not generate link');
       }
-    } catch {
-      // Link saving failed silently — download still works
+    } catch (err) {
+      setQuoteLinkError(err.message || 'Could not generate link');
     }
+  }
+
+  function setQuoteLinkError(msg) {
+    const el = $('quote-link-section');
+    if (el) el.innerHTML = `<span class="qlink-saving" style="color:#f87171">⚠ Link unavailable — use Download instead. (${msg})</span>`;
   }
 
   function setQuoteLink(url) {

@@ -1,15 +1,18 @@
 /**
  * Unified quote store:
- * - Local dev: reads/writes JSON files in .netlify/blobs-local/
- * - Production (Netlify): uses @netlify/blobs
+ * - Production (Netlify): uses @netlify/blobs (NETLIFY=true, NETLIFY_DEV not set)
+ * - Local dev (netlify dev): falls back to filesystem in .netlify/blobs-local/
+ *
+ * Detection: NETLIFY is set in both prod and local dev, but NETLIFY_DEV is only
+ * set during `netlify dev`. So prod = NETLIFY && !NETLIFY_DEV.
  */
 const fs   = require('fs');
 const path = require('path');
 
 const LOCAL_DIR = path.resolve(__dirname, '../../.netlify/blobs-local');
 
-function isNetlify() {
-  return !!(process.env.NETLIFY && process.env.SITE_ID);
+function isProduction() {
+  return !!(process.env.NETLIFY && !process.env.NETLIFY_DEV);
 }
 
 function ensureDir() {
@@ -17,7 +20,7 @@ function ensureDir() {
 }
 
 async function setJSON(key, value) {
-  if (isNetlify()) {
+  if (isProduction()) {
     const { getStore } = require('@netlify/blobs');
     return getStore('quotes').setJSON(key, value);
   }
@@ -26,7 +29,7 @@ async function setJSON(key, value) {
 }
 
 async function getJSON(key) {
-  if (isNetlify()) {
+  if (isProduction()) {
     const { getStore } = require('@netlify/blobs');
     return getStore('quotes').get(key, { type: 'json' });
   }
@@ -36,7 +39,7 @@ async function getJSON(key) {
 }
 
 async function listAll() {
-  if (isNetlify()) {
+  if (isProduction()) {
     const { getStore } = require('@netlify/blobs');
     const { blobs } = await getStore('quotes').list();
     return blobs.map(b => b.key);
