@@ -85,10 +85,13 @@ Return this exact JSON structure:
 }
 
 Rules:
-- Keep descriptions verbatim and complete
+- Keep resort descriptions verbatim and complete
 - Each inclusion as its own array item
 - If multiple room types for same resort, create separate options
 - Omit price fields if not found (no placeholders)
+- IMPORTANT: Do NOT mention the supplier, wholesaler, booking platform or distributor name anywhere (e.g. "AFS", "Afristay", "Tourvest", "Thompsons", "Club Travel" etc). This is an IziTravel client-facing quote — the client must only see IziTravel as the source
+- Strip any booking reference codes, agent codes, or internal identifiers from the output
+- resortName should be ONLY the resort/hotel name and star rating — no supplier branding
 
 Supplier document:
 ${rawText}`;

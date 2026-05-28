@@ -9,6 +9,7 @@ const App = (() => {
     chatMessages: [],           // [{role:'agent'|'ai', text:'...'}]
     currentBlobUrl: null,       // Active iframe blob URL
     isEditing:    false,        // True while edit AI call is in progress
+    quoteUrl:     null,         // Shareable client link from save-quote
   };
 
   // ── DOM refs ───────────────────────────────────────────────────────────────
@@ -149,12 +150,56 @@ const App = (() => {
         refreshPreview();
         showView('view-editor');
         document.dispatchEvent(new CustomEvent('quoteReady', { detail: qd }));
+
+        // Save quote to get a shareable link (non-blocking)
+        setQuoteLink(null); // reset while saving
+        saveQuoteLink(qd);
       }
 
     } catch (err) {
       showView('view-upload');
       alert('Error: ' + (err.message || 'Failed to generate quote. Please try again.'));
     }
+  }
+
+  // ── Quote link ─────────────────────────────────────────────────────────────
+  async function saveQuoteLink(quoteData) {
+    try {
+      const res = await fetch('/.netlify/functions/save-quote', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ quoteData, logoBase64: state.logoBase64 }),
+      });
+      const data = await res.json();
+      if (data.quoteUrl) {
+        state.quoteUrl = data.quoteUrl;
+        setQuoteLink(data.quoteUrl);
+      }
+    } catch {
+      // Link saving failed silently — download still works
+    }
+  }
+
+  function setQuoteLink(url) {
+    const el = $('quote-link-section');
+    if (!el) return;
+    if (!url) {
+      el.innerHTML = '<span class="qlink-saving">Generating shareable link…</span>';
+      return;
+    }
+    el.innerHTML = `
+      <div class="qlink-row">
+        <input class="qlink-input" id="qlink-input" value="${url}" readonly/>
+        <button class="qlink-copy" id="qlink-copy">Copy Link</button>
+      </div>
+      <p class="qlink-hint">Send this link directly to your client — they can view and accept the quote.</p>
+    `;
+    $('qlink-copy').addEventListener('click', () => {
+      navigator.clipboard.writeText(url).then(() => {
+        $('qlink-copy').textContent = '✓ Copied!';
+        setTimeout(() => { $('qlink-copy').textContent = 'Copy Link'; }, 2000);
+      });
+    });
   }
 
   // ── Chat edit ──────────────────────────────────────────────────────────────
@@ -324,6 +369,7 @@ const App = (() => {
     if (newBtn) newBtn.addEventListener('click', () => {
       state.file = null;
       state.quoteData = null;
+      state.quoteUrl = null;
       state.chatMessages = [];
       if (state.currentBlobUrl) URL.revokeObjectURL(state.currentBlobUrl);
       state.currentBlobUrl = null;

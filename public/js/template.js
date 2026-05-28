@@ -278,7 +278,8 @@ body{font-family:'Inter',sans-serif;background:#fff;color:var(--gray-900);line-h
 /* Footer */
 .site-ftr{background:var(--gray-900);border-top:1px solid rgba(255,255,255,.06);padding:28px 32px}
 .ftr-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.ftr-logo img{height:36px;filter:brightness(0) invert(1);opacity:.8}
+.ftr-logo{background:rgba(255,255,255,.92);border-radius:8px;padding:5px 10px;display:inline-flex;align-items:center}
+.ftr-logo img{height:32px;width:auto;display:block}
 .ftr-text{font-size:11px;color:rgba(255,255,255,.45);text-align:right;line-height:1.8}
 
 /* Modal */

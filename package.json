@@ -7,8 +7,10 @@
     "start": "netlify dev"
   },
   "dependencies": {
+    "@netlify/blobs": "^10.7.8",
     "mammoth": "^1.7.0",
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^1.1.1",
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "netlify-cli": "^17.0.0"
