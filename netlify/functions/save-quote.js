@@ -24,10 +24,11 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
 
   try {
-    const { quoteData, logoBase64 } = JSON.parse(event.body);
+    const { quoteData, logoBase64, quoteId: existingId } = JSON.parse(event.body);
     if (!quoteData) throw new Error('quoteData is required');
 
-    const quoteId = uuidv4();
+    // If an existing ID is provided, update that record; otherwise create a new one
+    const quoteId = existingId || uuidv4();
 
     const record = {
       quoteId,
@@ -48,7 +49,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quoteId, quoteUrl }),
+      body: JSON.stringify({ quoteId, quoteUrl, updated: !!existingId }),
     };
   } catch (err) {
     return {

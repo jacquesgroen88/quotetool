@@ -84,20 +84,36 @@ function buildQuoteHTML(data, logoBase64) {
         </div>`
       : '';
 
+    // Price — moved ABOVE inclusions so it's prominent
     const priceHTML = opt.pricePerPerson
       ? `<div class="price-box">
-          <div class="price-label">From</div>
-          <div class="price-amount">${esc(opt.pricePerPerson)}</div>
-          <div class="price-sub">per person sharing${opt.totalPax ? ` &times; ${esc(opt.totalPax)} pax` : ''}</div>
-          ${opt.totalPrice ? `<div class="price-total">Total: ${esc(opt.totalPrice)}</div>` : ''}
+          <div class="price-row">
+            <div>
+              <div class="price-label">From</div>
+              <div class="price-amount">${esc(opt.pricePerPerson)}</div>
+              <div class="price-sub">per person sharing${opt.totalPax ? ` &times; ${esc(opt.totalPax)} pax` : ''}</div>
+            </div>
+          </div>
+          ${opt.totalPrice ? `<div class="price-total">Total Package: ${esc(opt.totalPrice)}</div>` : ''}
         </div>`
       : '';
 
-    const badges = [
-      opt.nights     ? `<span class="badge badge-nights">&#127769; ${esc(opt.nights)} Nights</span>` : '',
-      opt.boardBasis ? `<span class="badge badge-board">${esc(opt.boardBasis)}</span>` : '',
-      opt.roomType   ? `<span class="badge badge-room">${esc(opt.roomType)}</span>` : '',
+    // Key differentiator facts — shown prominently under resort name
+    const factPills = [
+      opt.nights     ? `<span class="fact-pill fact-nights">&#127769; ${esc(opt.nights)} Nights</span>` : '',
+      opt.boardBasis ? `<span class="fact-pill fact-board">${esc(opt.boardBasis)}</span>` : '',
+      opt.roomType   ? `<span class="fact-pill fact-room">${esc(opt.roomType)}</span>` : '',
     ].filter(Boolean).join('');
+
+    const factsRow = factPills ? `<div class="opt-facts">${factPills}</div>` : '';
+
+    // Description — collapsible, secondary
+    const descHTML = opt.description
+      ? `<details class="desc-details">
+          <summary class="desc-summary">&#9432; Resort Details</summary>
+          <p class="resort-desc">${esc(opt.description)}</p>
+        </details>`
+      : '';
 
     // Embed option data for modal — use JSON in a data attribute
     const optDataAttr = esc(JSON.stringify({
@@ -114,17 +130,17 @@ function buildQuoteHTML(data, logoBase64) {
 <div class="opt-card" id="opt-${i + 1}">
   <div class="opt-hdr">
     <span class="opt-num">Option ${esc(String(opt.optionNumber || i + 1))}</span>
-    <span class="opt-badges">${badges}</span>
   </div>
   <div class="opt-body">
     <h3 class="resort-name">${esc(opt.resortName || 'Resort Option')}</h3>
-    <p class="resort-desc">${esc(opt.description || '')}</p>
+    ${factsRow}
+    ${priceHTML}
     <div class="incl-wrap">
       <div class="incl-title">This package includes:</div>
       <ul class="incl-list">${inclHTML}</ul>
     </div>
     ${addedHTML}
-    ${priceHTML}
+    ${descHTML}
     <button class="select-btn" data-opt="${optDataAttr}">Select This Package &#8594;</button>
   </div>
 </div>`;
@@ -227,18 +243,28 @@ body{font-family:'Inter',sans-serif;background:#fff;color:var(--gray-900);line-h
 
 .opt-card{background:#fff;border-radius:18px;border:2px solid var(--gray-200);overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s,box-shadow .2s}
 .opt-card:hover{border-color:var(--pink);box-shadow:var(--shadow-lg)}
-.opt-hdr{background:var(--pink);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.opt-num{color:#fff;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}
-.opt-badges{display:flex;gap:5px;flex-wrap:wrap}
-.badge{font-size:10px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
-.badge-nights{background:rgba(255,255,255,.2);color:#fff}
-.badge-board{background:rgba(255,255,255,.92);color:var(--pink-dark)}
-.badge-room{background:#fff3f3;color:var(--pink-dark)}
+.opt-hdr{background:var(--pink);padding:10px 22px;display:flex;align-items:center}
+.opt-num{color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.12em}
 
-.opt-body{padding:24px;display:flex;flex-direction:column;flex:1;gap:18px}
-.resort-name{font-size:18px;font-weight:800;color:var(--gray-900);letter-spacing:-.02em;line-height:1.2}
-.resort-desc{font-size:13.5px;color:var(--gray-500);line-height:1.75}
-.incl-title{font-size:12px;font-weight:700;color:var(--gray-900);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px}
+.opt-body{padding:22px;display:flex;flex-direction:column;flex:1;gap:16px}
+.resort-name{font-size:21px;font-weight:900;color:var(--gray-900);letter-spacing:-.03em;line-height:1.2}
+
+/* Key differentiator facts — prominent pills below resort name */
+.opt-facts{display:flex;flex-wrap:wrap;gap:7px}
+.fact-pill{font-size:12px;font-weight:700;padding:5px 13px;border-radius:999px;white-space:nowrap;letter-spacing:-.01em}
+.fact-nights{background:#1e293b;color:#fff}
+.fact-board{background:#15803d;color:#fff}
+.fact-room{background:var(--gray-700);color:#fff}
+
+/* Price — now prominent, before inclusions */
+.price-box{background:var(--pink-light);border:2px solid #fecaca;border-radius:14px;padding:16px 20px}
+.price-row{display:flex;align-items:flex-start}
+.price-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gray-500);margin-bottom:2px}
+.price-amount{font-size:34px;font-weight:900;color:var(--pink);letter-spacing:-.04em;line-height:1}
+.price-sub{font-size:11px;color:var(--gray-500);margin-top:3px}
+.price-total{font-size:13px;font-weight:700;color:var(--pink-dark);margin-top:10px;padding-top:10px;border-top:1px solid #fecaca}
+
+.incl-title{font-size:11px;font-weight:700;color:var(--gray-900);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px}
 .incl-list{list-style:none;display:flex;flex-direction:column;gap:6px}
 .incl-list li,.added-box li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--gray-700)}
 .chk{color:var(--green);font-weight:700;font-size:13px;flex-shrink:0;margin-top:1px}
@@ -246,11 +272,13 @@ body{font-family:'Inter',sans-serif;background:#fff;color:var(--gray-900);line-h
 .added-title{font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px}
 .added-box ul{list-style:none;display:flex;flex-direction:column;gap:6px}
 
-.price-box{background:var(--pink-light);border:2px solid #fecaca;border-radius:14px;padding:18px;text-align:center;margin-top:auto}
-.price-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gray-500);margin-bottom:3px}
-.price-amount{font-size:32px;font-weight:900;color:var(--pink);letter-spacing:-.03em;line-height:1}
-.price-sub{font-size:11px;color:var(--gray-500);margin-top:3px}
-.price-total{font-size:13px;font-weight:700;color:var(--pink-dark);margin-top:9px;padding-top:9px;border-top:1px solid #fecaca}
+/* Collapsible description */
+.desc-details{border:1px solid var(--gray-200);border-radius:9px;overflow:hidden}
+.desc-summary{display:block;padding:9px 14px;font-size:12px;font-weight:600;color:var(--gray-500);cursor:pointer;user-select:none;list-style:none}
+.desc-summary::-webkit-details-marker{display:none}
+.desc-summary::before{content:'&#9654; ';font-size:9px;margin-right:4px;transition:transform .15s}
+.desc-details[open] .desc-summary::before{content:'&#9660; '}
+.resort-desc{padding:12px 14px;font-size:13px;color:var(--gray-500);line-height:1.75;border-top:1px solid var(--gray-100)}
 
 .select-btn{width:100%;padding:14px;background:var(--pink);color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s,transform .1s;letter-spacing:-.01em}
 .select-btn:hover{background:var(--pink-dark)}.select-btn:active{transform:scale(.98)}

@@ -343,6 +343,13 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
         <div class="qlink-card">
           <div class="qlink-label">&#128279; Client Quote Link</div>
           <div id="quote-link-section"><span class="qlink-saving">Generating link…</span></div>
+          <div id="edit-link-section" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--gray-100)">
+            <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">&#9998; Edit Link (for you)</div>
+            <div class="qlink-row">
+              <input class="qlink-input" id="edit-link-input" readonly style="font-size:11px"/>
+              <button class="qlink-copy" id="edit-link-copy" style="font-size:11px;padding:7px 10px">Copy</button>
+            </div>
+          </div>
         </div>
 
         <!-- AI Edit chat -->

@@ -59,8 +59,11 @@ tbody td{padding:13px 16px;font-size:13.5px;color:var(--gray-700);vertical-align
 .td-dest .dest-dot{width:7px;height:7px;border-radius:50%;background:var(--pink);flex-shrink:0}
 .td-date{color:var(--gray-400);font-size:12px}
 .td-opts .pill{background:var(--gray-100);color:var(--gray-700);font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+.td-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .td-link a{display:inline-flex;align-items:center;gap:5px;background:var(--pink);color:#fff;text-decoration:none;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;transition:background .15s}
 .td-link a:hover{background:#c0313d}
+.td-edit a{display:inline-flex;align-items:center;gap:4px;background:#fff;color:var(--gray-700);text-decoration:none;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid var(--gray-200);transition:all .15s}
+.td-edit a:hover{border-color:var(--pink);color:var(--pink)}
 .td-copy{cursor:pointer;color:var(--gray-400);background:none;border:none;font-size:12px;font-family:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--gray-200);transition:all .15s}
 .td-copy:hover{color:var(--pink);border-color:var(--pink)}
 .empty-state{text-align:center;padding:64px 32px}
@@ -121,7 +124,7 @@ tbody td{padding:13px 16px;font-size:13.5px;color:var(--gray-700);vertical-align
           <th>Dates</th>
           <th>Options</th>
           <th>Created</th>
-          <th>Quote Link</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="quotesBody">
@@ -193,9 +196,12 @@ function renderQuotes(quotes) {
         <td class="td-date">${esc(q.dates) || '—'}</td>
         <td class="td-opts"><span class="pill">${q.optionCount} option${q.optionCount !== 1 ? 's' : ''}</span></td>
         <td class="td-date">${created}</td>
-        <td class="td-link">
-          <a href="${esc(q.quoteUrl)}" target="_blank">View ↗</a>
-          <button class="td-copy" onclick="copyLink('${esc(q.quoteUrl)}', this)">Copy Link</button>
+        <td>
+          <div class="td-actions">
+            <span class="td-link"><a href="${esc(q.quoteUrl)}" target="_blank">View ↗</a></span>
+            <span class="td-edit"><a href="/?edit=${esc(q.quoteId)}" target="_blank">Edit ✏</a></span>
+            <button class="td-copy" onclick="copyLink('${esc(q.quoteUrl)}', this)">Copy</button>
+          </div>
         </td>
       </tr>`;
   }).join('');

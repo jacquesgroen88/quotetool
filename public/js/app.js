@@ -10,6 +10,7 @@ const App = (() => {
     currentBlobUrl: null,       // Active iframe blob URL
     isEditing:    false,        // True while edit AI call is in progress
     quoteUrl:     null,         // Shareable client link from save-quote
+    editQuoteId:  null,         // UUID of the saved quote being edited (null = new quote)
   };
 
   // ── DOM refs ───────────────────────────────────────────────────────────────
@@ -163,22 +164,56 @@ const App = (() => {
   }
 
   // ── Quote link ─────────────────────────────────────────────────────────────
-  async function saveQuoteLink(quoteData) {
+  // silent=true — used when auto-saving after edits; doesn't reset the link UI
+  async function saveQuoteLink(quoteData, silent = false) {
     try {
+      if (!silent) setQuoteLink(null); // show "Generating link…" for new saves only
+      const body = { quoteData, logoBase64: state.logoBase64 };
+      if (state.editQuoteId) body.quoteId = state.editQuoteId; // update existing record
       const res = await fetch('/.netlify/functions/save-quote', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ quoteData, logoBase64: state.logoBase64 }),
+        body:    JSON.stringify(body),
       });
       const data = await res.json();
       if (data.quoteUrl) {
-        state.quoteUrl = data.quoteUrl;
-        setQuoteLink(data.quoteUrl);
+        state.quoteUrl    = data.quoteUrl;
+        state.editQuoteId = data.quoteId;   // store UUID for subsequent updates
+        if (!silent) setQuoteLink(data.quoteUrl);
       } else {
-        setQuoteLinkError(data.error || 'Could not generate link');
+        if (!silent) setQuoteLinkError(data.error || 'Could not generate link');
       }
     } catch (err) {
-      setQuoteLinkError(err.message || 'Could not generate link');
+      if (!silent) setQuoteLinkError(err.message || 'Could not generate link');
+    }
+  }
+
+  // ── Load saved quote for editing (called when ?edit=UUID in URL) ───────────
+  async function loadQuoteForEdit(quoteId) {
+    showView('view-generating');
+    setStatus('Loading saved quote…');
+    try {
+      const res  = await fetch(`/.netlify/functions/load-quote?id=${encodeURIComponent(quoteId)}`);
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Quote not found');
+
+      state.quoteData    = data.quoteData;
+      state.editQuoteId  = data.quoteId || quoteId;
+      if (data.logoBase64) state.logoBase64 = data.logoBase64;
+      state.chatMessages = [];
+      renderChatHistory();
+      refreshPreview();
+      showView('view-editor');
+      document.dispatchEvent(new CustomEvent('quoteReady', { detail: data.quoteData }));
+
+      // Set the existing view link (don't regenerate — same UUID, same URL)
+      const siteUrl  = location.origin;
+      const viewUrl  = `${siteUrl}/.netlify/functions/view-quote?id=${state.editQuoteId}`;
+      state.quoteUrl = viewUrl;
+      setQuoteLink(viewUrl);
+    } catch (err) {
+      showView('view-upload');
+      alert('Could not load saved quote: ' + (err.message || 'Unknown error'));
     }
   }
 
@@ -207,6 +242,24 @@ const App = (() => {
         setTimeout(() => { $('qlink-copy').textContent = 'Copy Link'; }, 2000);
       });
     });
+
+    // Also populate the edit link (for Terri to come back and edit)
+    if (state.editQuoteId) {
+      const editUrl     = location.origin + '/?edit=' + state.editQuoteId;
+      const editSection = $('edit-link-section');
+      const editInput   = $('edit-link-input');
+      const editCopy    = $('edit-link-copy');
+      if (editSection) editSection.style.display = 'block';
+      if (editInput)   editInput.value = editUrl;
+      if (editCopy) {
+        editCopy.onclick = () => {
+          navigator.clipboard.writeText(editUrl).then(() => {
+            editCopy.textContent = '✓';
+            setTimeout(() => { editCopy.textContent = 'Copy'; }, 2000);
+          });
+        };
+      }
+    }
   }
 
   // ── Chat edit ──────────────────────────────────────────────────────────────
@@ -228,6 +281,8 @@ const App = (() => {
       state.quoteData = result.quoteData;
       addChatMsg('ai', result.changes || 'Done — quote updated.');
       refreshPreview();
+      // Auto-save updated quote silently (so client link stays current)
+      if (state.editQuoteId) saveQuoteLink(state.quoteData, true);
     } catch (err) {
       addChatMsg('ai', '⚠️ Sorry, I couldn\'t apply that change: ' + (err.message || 'Unknown error'));
     } finally {
@@ -346,6 +401,10 @@ const App = (() => {
     initDropZone();
     initQuickChips();
 
+    // Check for ?edit=UUID in URL — load existing saved quote into editor
+    const editId = new URLSearchParams(location.search).get('edit');
+    if (editId) loadQuoteForEdit(editId);
+
     // Generate button
     const genBtn = $('generate-btn');
     if (genBtn) genBtn.addEventListener('click', runGenerate);
@@ -377,6 +436,7 @@ const App = (() => {
       state.file = null;
       state.quoteData = null;
       state.quoteUrl = null;
+      state.editQuoteId = null;
       state.chatMessages = [];
       if (state.currentBlobUrl) URL.revokeObjectURL(state.currentBlobUrl);
       state.currentBlobUrl = null;
