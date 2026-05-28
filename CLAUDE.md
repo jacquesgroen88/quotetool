@@ -114,9 +114,13 @@ All functions are CommonJS v1 (`exports.handler = async (event) => {}`). They se
 - **Purpose:** Chat-based editing — natural language → modified JSON
 
 ### `POST /.netlify/functions/save-quote`
-- **Input:** `{ quoteData: {...}, logoBase64: "data:image/..." }`
-- **Output:** `{ quoteId: "uuid", quoteUrl: "https://izitravelquotes.netlify.app/.netlify/functions/view-quote?id=UUID" }`
-- **Purpose:** Persists quote, returns shareable client link
+- **Input:** `{ quoteData: {...}, logoBase64: "data:image/...", quoteId?: "existing-uuid" }`
+- **Output:** `{ quoteId: "uuid", quoteUrl: "...", updated: bool }`
+- **Purpose:** Creates a new quote (no quoteId) or updates an existing one (quoteId provided). Auto-called after every AI edit to keep the client link current.
+
+### `GET /.netlify/functions/load-quote?id=UUID`
+- **Output:** `{ quoteId, quoteData, logoBase64, createdAt, clientName, destination }`
+- **Purpose:** Returns raw quote JSON for loading back into the editor. Used by `?edit=UUID` flow.
 
 ### `GET /.netlify/functions/view-quote?id=UUID`
 - **Output:** Full branded HTML page (served to client's browser)
@@ -135,7 +139,7 @@ Abstracts quote persistence:
 - **Local dev:** Saves JSON files to `.netlify/blobs-local/[uuid].json`
 - **Production (Netlify):** Uses `@netlify/blobs` (requires `NETLIFY=true` and `SITE_ID` env vars, set automatically by Netlify)
 
-Detection: `isNetlify()` checks `process.env.NETLIFY && process.env.SITE_ID`.
+Detection: `isProduction()` checks `process.env.NETLIFY && !process.env.NETLIFY_DEV`. `NETLIFY_DEV` is only set during `netlify dev`, not in production.
 
 ---
 
@@ -147,6 +151,7 @@ State machine with 3 views: `view-upload` → `view-generating` → `view-editor
 ```javascript
 {
   file,           // Uploaded File object
+  editQuoteId,    // UUID of saved quote being edited (null for new quotes)
   quoteData,      // Current structured JSON
   logoBase64,     // Logo preloaded as base64 (fetched from /assets/izilogo.jpg)
   chatMessages,   // [{role:'agent'|'ai', text}]
@@ -158,9 +163,11 @@ State machine with 3 views: `view-upload` → `view-generating` → `view-editor
 
 **Key flows:**
 - File dropped → `runDetect()` → auto-fills form fields
-- Generate clicked → `runGenerate()` → shows preview + triggers `saveQuoteLink()` in background
-- Chat message → `runEdit()` → updates JSON → `refreshPreview()` rebuilds iframe
+- Generate clicked → `runGenerate()` → shows preview + triggers `saveQuoteLink()` in background → sets `state.editQuoteId`
+- Chat message → `runEdit()` → updates JSON → `refreshPreview()` → auto-saves silently via `saveQuoteLink(quoteData, silent=true)` if `editQuoteId` set
 - Download → `downloadQuote()` → builds HTML, triggers browser download
+- `?edit=UUID` in URL → `loadQuoteForEdit(UUID)` → fetches from `load-quote` function → populates editor with existing quote → sets `state.editQuoteId`
+- Edit link (for Terri to come back) shown in the link card as `/?edit=UUID`
 
 ---
 
@@ -172,7 +179,7 @@ Contains `buildQuoteHTML(data, logoBase64)` — builds the entire client-facing 
 1. White header (matching izitravel.co.za style) with logo + 4px pink accent bar
 2. Hero section: destination Unsplash photo + overlay with client name, dates, occasion, adults/children pills
 3. Intro strip: personalNote, quoteValidity, greeting
-4. Options grid: each option card with resort name, description, inclusions, added value, price
+4. Options grid: each option card — resort name (large) → key facts (nights/board/room as colored pills) → price prominent → inclusions → description (collapsible `<details>`) → CTA button
 5. Flight details section
 6. Exclusions grid (✕ bullets)
 7. CTA strip with "Select This Package" button → posts to Make.com webhook
@@ -318,3 +325,13 @@ Supplier PDFs for testing live at:
 - **Added:** Admin dashboard at `/admin.html` — password protected, lists all quotes
 - **Added:** `_store.js` — filesystem fallback for local dev, Netlify Blobs in production
 - **Fixed:** `.env` not loaded by netlify dev — added inline fs-based env loader to each function
+
+### Session 4 — Option card redesign + edit-later architecture
+- **Redesigned:** Option cards now lead with resort name (large, 21px/900wt) → key differentiator pills (nights dark, board green, room slate) → price prominently before inclusions → description collapsed in `<details>` element
+- **Added:** `save-quote.js` accepts optional `quoteId` to update existing records (not just create new)
+- **Added:** `load-quote.js` — GET endpoint returning raw JSON for loading a saved quote into the editor
+- **Added:** `?edit=UUID` URL param handling in `app.js` — opens saved quote directly in editor
+- **Added:** `state.editQuoteId` — tracks UUID of current quote; auto-saves silently after every AI edit
+- **Added:** Edit Link shown in the link card (for Terri's own bookmarking)
+- **Added:** Admin table now shows Edit ✏ link alongside View ↗ button
+- **Fixed:** `_store.js` production detection bug — now uses `NETLIFY && !NETLIFY_DEV`
