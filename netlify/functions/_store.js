@@ -1,6 +1,8 @@
 /**
  * Unified quote store:
- * - Production (Netlify): uses @netlify/blobs (NETLIFY=true, NETLIFY_DEV not set)
+ * - Production (Netlify): uses @netlify/blobs
+ *   IMPORTANT: For Netlify Functions v1, Blobs context is in event.blobs + headers.
+ *   Call store.init(event) at the top of each handler before any get/set operation.
  * - Local dev (netlify dev): falls back to filesystem in .netlify/blobs-local/
  *
  * Detection: NETLIFY is set in both prod and local dev, but NETLIFY_DEV is only
@@ -17,6 +19,23 @@ function isProduction() {
 
 function ensureDir() {
   if (!fs.existsSync(LOCAL_DIR)) fs.mkdirSync(LOCAL_DIR, { recursive: true });
+}
+
+/**
+ * Must be called once per function invocation with the Lambda event object.
+ * Initialises the Netlify Blobs context from event.blobs + request headers.
+ * No-op in local dev or if already initialised.
+ */
+function init(event) {
+  if (!isProduction()) return;
+  if (!event) return;
+  try {
+    const { connectLambda } = require('@netlify/blobs');
+    connectLambda(event);
+  } catch (e) {
+    // connectLambda may throw if event.blobs is absent (older CLI / local calls)
+    // That's fine — getStore() will still try NETLIFY_BLOBS_CONTEXT as fallback
+  }
 }
 
 async function setJSON(key, value) {
@@ -50,4 +69,4 @@ async function listAll() {
     .map(f => f.slice(0, -5));
 }
 
-module.exports = { setJSON, getJSON, listAll };
+module.exports = { init, setJSON, getJSON, listAll };

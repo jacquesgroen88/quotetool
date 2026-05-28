@@ -17,6 +17,9 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
+  // Initialise Netlify Blobs context for v1 functions
+  store.init(event);
+
   const quoteId = event.queryStringParameters?.id;
   if (!quoteId) {
     return {

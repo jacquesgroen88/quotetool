@@ -23,6 +23,9 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors, body: '' };
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
 
+  // Initialise Netlify Blobs context for v1 functions (reads from event.blobs)
+  store.init(event);
+
   try {
     const { quoteData, logoBase64, quoteId: existingId } = JSON.parse(event.body);
     if (!quoteData) throw new Error('quoteData is required');

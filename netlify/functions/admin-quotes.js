@@ -22,9 +22,12 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors, body: '' };
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
 
+  // Initialise Netlify Blobs context for v1 functions
+  store.init(event);
+
   try {
     const { password } = JSON.parse(event.body || '{}');
-    const adminPass = process.env.ADMIN_PASSWORD || 'izitravel2024';
+    const adminPass = process.env.ADMIN_PASSWORD || 'Reviewtap';
 
     if (!password || password !== adminPass) {
       return {
