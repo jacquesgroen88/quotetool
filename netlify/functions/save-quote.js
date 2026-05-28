@@ -1,5 +1,5 @@
 const store = require('./_store');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto'); // built-in — no uuid package needed
 const fs   = require('fs');
 const path = require('path');
 
@@ -28,7 +28,7 @@ exports.handler = async (event) => {
     if (!quoteData) throw new Error('quoteData is required');
 
     // existingId is a gist ID for updates, or undefined for new quotes
-    const inputId = existingId || uuidv4();
+    const inputId = existingId || randomUUID();
 
     const record = {
       quoteId: inputId,

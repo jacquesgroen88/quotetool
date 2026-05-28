@@ -107,15 +107,18 @@ function buildQuoteHTML(data, logoBase64) {
 
     const factsRow = factPills ? `<div class="opt-facts">${factPills}</div>` : '';
 
-    // Per-option flight details
-    const optFlightHTML = (opt.flightDetails && opt.flightDetails !== 'See flight details below')
-      ? `<div class="opt-flight">
-          <div class="opt-flight-title">&#9992; Flight Details</div>
-          <div class="opt-flight-body">${esc(opt.flightDetails).replace(/\n/g, '<br>')}</div>
-        </div>`
-      : (opt.flightDetails === 'See flight details below'
-          ? `<div class="opt-flight opt-flight-ref">&#9992; See flight details below</div>`
-          : '');
+    // Per-option flight details — only show when real content exists
+    const flightVal = (opt.flightDetails || '').trim();
+    const flightIsPlaceholder = !flightVal
+      || /not provided|not available|no flight|tbc|n\/a/i.test(flightVal);
+    const optFlightHTML = flightIsPlaceholder
+      ? ''
+      : flightVal === 'See flight details below'
+        ? `<div class="opt-flight opt-flight-ref">&#9992; See flight details below</div>`
+        : `<div class="opt-flight">
+            <div class="opt-flight-title">&#9992; Flight Details</div>
+            <div class="opt-flight-body">${esc(flightVal).replace(/\n/g, '<br>')}</div>
+          </div>`;
 
     // Description — collapsible, secondary
     const descHTML = opt.description

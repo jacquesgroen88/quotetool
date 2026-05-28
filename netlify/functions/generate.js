@@ -75,13 +75,13 @@ Return this exact JSON structure:
       "description": "Full resort marketing description verbatim",
       "inclusions": ["inclusion 1", "inclusion 2"],
       "addedValue": ["added value item if present"],
-      "flightDetails": "Flight details specific to this option — departure city, flight numbers, times, dates, luggage allowance. Use 'See flight details below' if flights are shared across all options and listed separately.",
+      "flightDetails": "Flight details specific to this option — departure city, flight numbers, times, dates, luggage allowance. Use 'See flight details below' if flights are shared. Use empty string \"\" if no flight info exists in the document.",
       "pricePerPerson": "R00,000.00",
       "totalPrice": "R00,000.00",
       "totalPax": "number of pax for this price if stated"
     }
   ],
-  "flightDetails": "Shared flight information that applies to ALL options (only populate if flights are not option-specific). Leave empty string if each option has its own flightDetails.",
+  "flightDetails": "Shared flight information that applies to ALL options (only populate if flights are not option-specific). Use empty string if each option has its own flightDetails or if no flights are mentioned.",
   "exclusions": ["exclusion 1", "exclusion 2"]
 }
 
@@ -89,8 +89,8 @@ Rules:
 - Keep resort descriptions verbatim and complete
 - Each inclusion as its own array item
 - If multiple room types for same resort, create separate options
-- Omit price fields if not found (no placeholders)
-- FLIGHT DETAILS: Always extract flight information. If each option has different flights, put them in options[].flightDetails. If all options share the same flights, put them in the top-level flightDetails and set each option's flightDetails to "See flight details below". Never omit flight info — it is critical for the client.
+- PRICING (critical): Search the entire document thoroughly for prices — they may appear as "R 45,000", "R45000", "ZAR 45,000", "from R45k", or in a table/grid. Extract every price found and assign to the correct option. If a price is genuinely absent from the document, omit the price fields entirely (do not write placeholder text).
+- FLIGHT DETAILS: If flight info exists in the document, extract it fully. If each option has different flights, put them in options[].flightDetails. If all options share the same flights, put them in the top-level flightDetails and set each option's flightDetails to "See flight details below". If NO flight info is in the document, use empty string "" — never write placeholder text like "not provided" or "not available".
 - IMPORTANT: Do NOT mention the supplier, wholesaler, booking platform or distributor name anywhere (e.g. "AFS", "Afristay", "Tourvest", "Thompsons", "Club Travel" etc). This is an IziTravel client-facing quote — the client must only see IziTravel as the source
 - Strip any booking reference codes, agent codes, or internal identifiers from the output
 - resortName should be ONLY the resort/hotel name and star rating — no supplier branding
