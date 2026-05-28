@@ -2,6 +2,9 @@
   publish = "public"
   command = "echo 'Static site — no build step'"
 
+[build.environment]
+  NODE_VERSION = "18"
+
 [functions]
   directory = "netlify/functions"
 

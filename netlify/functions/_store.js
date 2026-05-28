@@ -55,11 +55,21 @@ function gistDescription(record) {
 }
 
 async function ghFetch(url, options) {
-  const res = await fetch(url, options);
+  // Abort after 8 s so Netlify never kills us silently with a 502
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  let res;
+  try {
+    res = await fetch(url, { ...options, signal: ctrl.signal });
+  } catch (err) {
+    throw new Error(`GitHub API request failed: ${err.message}`);
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) {
     let body = '';
     try { body = await res.text(); } catch {}
-    throw new Error(`GitHub API ${res.status}: ${body.slice(0, 200)}`);
+    throw new Error(`GitHub API ${res.status}: ${body.slice(0, 300)}`);
   }
   return res;
 }
@@ -130,7 +140,17 @@ async function getJSON(key) {
     const token = process.env.GITHUB_TOKEN;
     if (!token) throw new Error('GITHUB_TOKEN not set');
 
-    const res = await fetch(`${GITHUB_API}/gists/${key}`, { headers: ghHeaders() });
+    // Use raw fetch with timeout for getJSON so we can handle 404 without throwing
+    const ctrl  = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    let res;
+    try {
+      res = await fetch(`${GITHUB_API}/gists/${key}`, { headers: ghHeaders(), signal: ctrl.signal });
+    } catch (err) {
+      throw new Error(`GitHub API request failed: ${err.message}`);
+    } finally {
+      clearTimeout(timer);
+    }
     if (res.status === 404) return null;
     if (!res.ok) {
       let body = ''; try { body = await res.text(); } catch {}
@@ -160,10 +180,12 @@ async function listAll() {
     const ids = [];
     let page  = 1;
     while (true) {
-      const res = await fetch(
-        `${GITHUB_API}/gists?per_page=100&page=${page}`,
-        { headers: ghHeaders() }
-      );
+      const ctrl2 = new AbortController();
+      const t2 = setTimeout(() => ctrl2.abort(), 8000);
+      let res;
+      try {
+        res = await fetch(`${GITHUB_API}/gists?per_page=100&page=${page}`, { headers: ghHeaders(), signal: ctrl2.signal });
+      } catch { break; } finally { clearTimeout(t2); }
       if (!res.ok) break;
       const gists = await res.json();
       for (const g of gists) {
