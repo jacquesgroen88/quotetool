@@ -1,4 +1,4 @@
-const { getStore } = require('@netlify/blobs');
+const store = require('./_store');
 const { v4: uuidv4 } = require('uuid');
 const fs   = require('fs');
 const path = require('path');
@@ -28,7 +28,6 @@ exports.handler = async (event) => {
     if (!quoteData) throw new Error('quoteData is required');
 
     const quoteId = uuidv4();
-    const store   = getStore('quotes');
 
     const record = {
       quoteId,

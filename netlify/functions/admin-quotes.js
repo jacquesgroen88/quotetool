@@ -1,4 +1,4 @@
-const { getStore } = require('@netlify/blobs');
+const store = require('./_store');
 const fs   = require('fs');
 const path = require('path');
 
@@ -34,26 +34,26 @@ exports.handler = async (event) => {
       };
     }
 
-    const store  = getStore('quotes');
-    const { blobs } = await store.list();
+    const keys = await store.listAll();
 
-    // Fetch metadata for each quote (just the lightweight fields)
+    // Fetch metadata for each quote
     const quotes = await Promise.all(
-      blobs.map(async (blob) => {
+      keys.map(async (key) => {
         try {
-          const record = await store.get(blob.key, { type: 'json' });
+          const record = await store.getJSON(key);
+          const blob = { key };
           const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'http://localhost:3002';
           return {
-            quoteId:    blob.key,
+            quoteId:    key,
             clientName:  record.clientName  || 'Unknown',
             destination: record.destination || 'Unknown',
             dates:       record.dates       || '',
             createdAt:   record.createdAt   || '',
-            quoteUrl:    `${siteUrl}/.netlify/functions/view-quote?id=${blob.key}`,
+            quoteUrl:    `${siteUrl}/.netlify/functions/view-quote?id=${key}`,
             optionCount: record.quoteData?.options?.length || 0,
           };
         } catch {
-          return { quoteId: blob.key, clientName: 'Error loading', createdAt: '' };
+          return { quoteId: key, clientName: 'Error loading', createdAt: '' };
         }
       })
     );

@@ -1,4 +1,4 @@
-const { getStore } = require('@netlify/blobs');
+const store = require('./_store');
 const fs   = require('fs');
 const path = require('path');
 
@@ -27,8 +27,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const store  = getStore('quotes');
-    const record = await store.get(quoteId, { type: 'json' });
+    const record = await store.getJSON(quoteId);
 
     if (!record) {
       return {
