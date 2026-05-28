@@ -1,0 +1,19 @@
+[build]
+  publish = "public"
+  command = "echo 'Static site — no build step'"
+
+[functions]
+  directory = "netlify/functions"
+
+[dev]
+  framework = "#static"
+  port = 3002
+  publish = "public"
+  functions = "netlify/functions"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"

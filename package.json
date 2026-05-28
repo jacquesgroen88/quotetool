@@ -1,0 +1,16 @@
+{
+  "name": "izitravel-quote-tool",
+  "version": "1.0.0",
+  "description": "IziTravel branded quote generator — Netlify edition",
+  "scripts": {
+    "dev": "netlify dev",
+    "start": "netlify dev"
+  },
+  "dependencies": {
+    "mammoth": "^1.7.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  }
+}

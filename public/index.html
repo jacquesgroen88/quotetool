@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>IziTravel · Quote Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+/* ── Reset & Root ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pink:#e63946;--pink-dark:#b91c1c;--pink-light:#fef2f2;
+  --gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;
+  --gray-400:#9ca3af;--gray-500:#6b7280;--gray-700:#374151;--gray-900:#111827;
+  --green:#16a34a;--green-light:#f0fdf4;
+  --radius:12px;--shadow:0 4px 24px rgba(0,0,0,.07);--shadow-lg:0 8px 40px rgba(0,0,0,.13);
+}
+body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-900);min-height:100vh;line-height:1.6}
+
+/* ── Header — matches IziTravel website ── */
+.app-header{background:#fff;border-bottom:1px solid var(--gray-200);position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.app-header-inner{max-width:1400px;margin:0 auto;padding:0 32px;height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.app-logo img{height:52px;width:auto;display:block}
+.app-title{font-size:14px;font-weight:600;color:var(--gray-500);letter-spacing:-.01em}
+.app-title span{color:var(--pink);font-weight:700}
+
+/* ── Main layout ── */
+.app-main{max-width:1400px;margin:0 auto;padding:40px 32px}
+
+/* ════════════════════════════════════════
+   VIEW: UPLOAD
+════════════════════════════════════════ */
+.upload-layout{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;max-width:960px;margin:0 auto}
+.upload-col-head{margin-bottom:24px}
+.upload-col-head h1{font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--gray-900);margin-bottom:6px}
+.upload-col-head p{font-size:14px;color:var(--gray-500)}
+
+/* Drop zone */
+.drop-zone{border:2px dashed var(--gray-300,#d1d5db);border-radius:var(--radius);background:#fff;padding:40px 24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;user-select:none}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--pink);background:var(--pink-light)}
+.drop-icon{font-size:36px;margin-bottom:12px}
+.drop-main{font-size:15px;font-weight:600;color:var(--gray-700);margin-bottom:4px}
+.drop-sub{font-size:13px;color:var(--gray-400);margin-bottom:16px}
+.drop-btn{display:inline-block;background:var(--pink);color:#fff;font-size:13px;font-weight:700;padding:9px 22px;border-radius:999px;transition:background .15s}
+.drop-zone:hover .drop-btn{background:var(--pink-dark)}
+.drop-file-name{font-size:14px;font-weight:600;color:var(--gray-900);margin-bottom:4px}
+.drop-file-size{font-size:12px;color:var(--green);font-weight:600;margin-bottom:6px}
+.drop-change{font-size:12px;color:var(--gray-400);margin-top:8px}
+
+/* Detect status */
+.detect-status{font-size:13px;margin-top:10px;min-height:18px;font-weight:500}
+.detect-status.loading{color:var(--gray-500)}
+.detect-status.success{color:var(--green)}
+.detect-status.warn{color:#d97706}
+
+/* Form card */
+.form-card{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);padding:28px;box-shadow:var(--shadow)}
+.form-card h2{font-size:16px;font-weight:700;color:var(--gray-900);margin-bottom:4px}
+.form-card .form-sub{font-size:13px;color:var(--gray-400);margin-bottom:20px}
+.form-grid{display:flex;flex-direction:column;gap:14px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.form-group input,.form-group select,.form-group textarea{
+  width:100%;padding:10px 13px;border:1.5px solid var(--gray-200);border-radius:9px;
+  font-size:14px;font-family:inherit;color:var(--gray-900);background:#fff;
+  outline:none;transition:border-color .15s;appearance:none
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--pink)}
+.form-group textarea{resize:vertical;min-height:72px}
+.form-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gray-400);margin-top:6px;margin-bottom:-4px}
+
+/* Generate button */
+.generate-btn{width:100%;padding:15px;background:var(--pink);color:#fff;border:none;border-radius:var(--radius);font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s,transform .1s;letter-spacing:-.01em;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px}
+.generate-btn:hover{background:var(--pink-dark)}.generate-btn:active{transform:scale(.98)}
+
+/* ════════════════════════════════════════
+   VIEW: GENERATING
+════════════════════════════════════════ */
+.gen-view{display:flex;align-items:center;justify-content:center;min-height:60vh}
+.gen-card{background:#fff;border-radius:20px;padding:56px 48px;text-align:center;box-shadow:var(--shadow-lg);max-width:440px;width:100%}
+.spinner{width:52px;height:52px;border:4px solid var(--gray-200);border-top-color:var(--pink);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 24px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gen-card h2{font-size:20px;font-weight:800;color:var(--gray-900);margin-bottom:8px;letter-spacing:-.02em}
+#gen-status{font-size:14px;color:var(--gray-500)}
+
+/* ════════════════════════════════════════
+   VIEW: EDITOR (two-panel)
+════════════════════════════════════════ */
+.editor-layout{display:grid;grid-template-columns:1fr 380px;gap:24px;height:calc(100vh - 160px);align-items:start}
+
+/* Preview panel */
+.preview-panel{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);overflow:hidden;height:100%;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.preview-toolbar{padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;background:var(--gray-50);flex-shrink:0}
+.preview-label{font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px}
+.preview-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+#preview-frame{width:100%;flex:1;border:none;display:block}
+
+/* Chat panel */
+.chat-panel{display:flex;flex-direction:column;gap:16px;height:100%;overflow:hidden}
+
+/* Quote info card */
+.quote-info-card{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);padding:16px 18px;box-shadow:var(--shadow)}
+.qi-dest{font-size:18px;font-weight:800;color:var(--gray-900);letter-spacing:-.02em}
+.qi-meta{font-size:12px;color:var(--gray-500);margin-top:2px}
+.qi-actions{display:flex;gap:8px;margin-top:12px}
+.btn-download{flex:1;padding:10px;background:var(--pink);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-download:hover{background:var(--pink-dark)}
+.btn-new{padding:10px 14px;background:#fff;color:var(--gray-700);border:1.5px solid var(--gray-200);border-radius:9px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s}
+.btn-new:hover{border-color:var(--gray-400);color:var(--gray-900)}
+
+/* AI Edit chat */
+.chat-card{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);display:flex;flex-direction:column;flex:1;overflow:hidden;box-shadow:var(--shadow)}
+.chat-header{padding:14px 18px;border-bottom:1px solid var(--gray-100);background:var(--gray-50);flex-shrink:0}
+.chat-header h3{font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:2px}
+.chat-header p{font-size:12px;color:var(--gray-400)}
+
+/* Quick chips */
+.chips-wrap{padding:10px 14px;border-bottom:1px solid var(--gray-100);display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;background:#fff}
+.chip{padding:5px 11px;background:var(--pink-light);color:var(--pink-dark);border:1px solid #fecaca;border-radius:999px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.chip:hover{background:#fecaca;color:var(--pink-dark)}
+
+#chat-history{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.chat-msg{display:flex}
+.chat-agent{justify-content:flex-end}
+.chat-ai{justify-content:flex-start}
+.chat-bubble{max-width:86%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5}
+.chat-agent .chat-bubble{background:var(--gray-100);color:var(--gray-900);border-bottom-right-radius:4px}
+.chat-ai .chat-bubble{background:var(--pink-light);color:var(--pink-dark);border-bottom-left-radius:4px;border:1px solid #fecaca}
+
+.chat-empty{font-size:13px;color:var(--gray-400);text-align:center;padding:24px 16px;line-height:1.7}
+
+.chat-input-wrap{padding:12px;border-top:1px solid var(--gray-100);display:flex;gap:8px;flex-shrink:0}
+#chat-input{flex:1;padding:10px 13px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13.5px;font-family:inherit;color:var(--gray-900);outline:none;transition:border-color .15s;resize:none}
+#chat-input:focus{border-color:var(--pink)}
+#chat-send{padding:10px 16px;background:var(--pink);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s;white-space:nowrap}
+#chat-send:hover{background:var(--pink-dark)}
+#chat-send:disabled{background:var(--gray-400);cursor:not-allowed}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .editor-layout{grid-template-columns:1fr;height:auto}
+  .preview-panel{height:70vw;min-height:400px}
+  .chat-panel{height:auto}
+}
+@media(max-width:640px){
+  .app-main{padding:20px 16px}
+  .upload-layout{grid-template-columns:1fr}
+  .app-header-inner{padding:0 20px}
+  .form-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="app-header">
+  <div class="app-header-inner">
+    <a class="app-logo" href="/"><img src="/assets/izilogo.jpg" alt="IziTravel"/></a>
+    <div class="app-title">Quote Generator &nbsp;<span>Internal Tool</span></div>
+  </div>
+</header>
+
+<main class="app-main">
+
+  <!-- ══════════════════════════════════
+       VIEW: UPLOAD
+  ══════════════════════════════════ -->
+  <div id="view-upload">
+    <div class="upload-layout">
+
+      <!-- Left: file drop + form -->
+      <div>
+        <div class="upload-col-head">
+          <h1>New Client Quote</h1>
+          <p>Upload a supplier document and fill in the client details below.</p>
+        </div>
+
+        <!-- Drop zone -->
+        <div id="drop-zone" class="drop-zone">
+          <div class="drop-icon">&#128196;</div>
+          <div class="drop-main">Drop supplier document here</div>
+          <div class="drop-sub">PDF or DOCX &mdash; up to 8 MB</div>
+          <div class="drop-btn">Browse Files</div>
+        </div>
+        <input type="file" id="file-input" accept=".pdf,.docx" style="display:none"/>
+        <div id="detect-status" class="detect-status"></div>
+      </div>
+
+      <!-- Right: client detail form -->
+      <div>
+        <div class="form-card">
+          <h2>Client &amp; Trip Details</h2>
+          <p class="form-sub">Auto-detected from the document — review and correct if needed.</p>
+
+          <div class="form-grid">
+
+            <div class="form-section-label">Client</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Title</label>
+                <select id="f-clientTitle">
+                  <option value="">None</option>
+                  <option value="Mr">Mr</option>
+                  <option value="Mrs">Mrs</option>
+                  <option value="Mr &amp; Mrs">Mr &amp; Mrs</option>
+                  <option value="Dr">Dr</option>
+                  <option value="Prof">Prof</option>
+                  <option value="The">The</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Surname / Name</label>
+                <input type="text" id="f-clientName" placeholder="e.g. Ferreira"/>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Occasion</label>
+              <input type="text" id="f-occasion" placeholder="e.g. Anniversary, Birthday, Honeymoon"/>
+            </div>
+
+            <div class="form-section-label">Trip</div>
+            <div class="form-group">
+              <label>Destination</label>
+              <input type="text" id="f-destination" placeholder="e.g. Zanzibar"/>
+            </div>
+
+            <div class="form-group">
+              <label>Travel Dates</label>
+              <input type="text" id="f-dates" placeholder="e.g. 5–12 September 2026"/>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Adults</label>
+                <select id="f-adults">
+                  <option value="2">2</option>
+                  <option value="1">1</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6+</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Children</label>
+                <select id="f-children">
+                  <option value="0">None</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4+</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-section-label">Optional</div>
+            <div class="form-group">
+              <label>Personal Note to Client</label>
+              <textarea id="f-personalNote" placeholder="e.g. I've included a sea-view option based on what you mentioned…"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Quote Valid For</label>
+              <select id="f-validity">
+                <option value="24">24 hours</option>
+                <option value="48" selected>48 hours</option>
+                <option value="72">72 hours</option>
+                <option value="168">7 days</option>
+              </select>
+            </div>
+
+            <button id="generate-btn" class="generate-btn">
+              &#10024; Generate Branded Quote
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       VIEW: GENERATING
+  ══════════════════════════════════ -->
+  <div id="view-generating" hidden>
+    <div class="gen-view">
+      <div class="gen-card">
+        <div class="spinner"></div>
+        <h2>Generating your quote…</h2>
+        <p id="gen-status">Starting up…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       VIEW: EDITOR (two-panel)
+  ══════════════════════════════════ -->
+  <div id="view-editor" hidden>
+    <div class="editor-layout">
+
+      <!-- Left: live preview -->
+      <div class="preview-panel">
+        <div class="preview-toolbar">
+          <span class="preview-label">
+            <span class="preview-dot"></span>
+            Live Quote Preview
+          </span>
+          <span style="font-size:12px;color:var(--gray-400)">Scroll to see full quote</span>
+        </div>
+        <iframe id="preview-frame" title="Quote Preview"></iframe>
+      </div>
+
+      <!-- Right: quote info + chat -->
+      <div class="chat-panel">
+
+        <!-- Quote summary + actions -->
+        <div class="quote-info-card">
+          <div class="qi-dest" id="qi-dest">—</div>
+          <div class="qi-meta" id="qi-meta">—</div>
+          <div class="qi-actions">
+            <button class="btn-download" id="download-btn">&#11015; Download Quote</button>
+            <button class="btn-new" id="new-quote-btn">+ New</button>
+          </div>
+        </div>
+
+        <!-- AI Edit chat -->
+        <div class="chat-card">
+          <div class="chat-header">
+            <h3>✏️ Edit Assistant</h3>
+            <p>Describe any change — the quote updates instantly.</p>
+          </div>
+
+          <!-- Quick chips -->
+          <div class="chips-wrap">
+            <span class="chip" data-chip="Change client title to Mr &amp; Mrs">Mr &amp; Mrs</span>
+            <span class="chip" data-chip="Remove the last option">Remove last option</span>
+            <span class="chip" data-chip="Update the price on option 1 to ">Update price</span>
+            <span class="chip" data-chip="Add to option 1 inclusions: ">Add inclusion</span>
+            <span class="chip" data-chip="Change travel dates to ">Change dates</span>
+            <span class="chip" data-chip="Remove the added value section from option ">Remove added value</span>
+          </div>
+
+          <!-- Chat history -->
+          <div id="chat-history">
+            <div class="chat-empty">
+              No changes yet.<br>
+              Use the chips above or type a change below.<br><br>
+              <strong>Examples:</strong><br>
+              "Change client to Mrs Ferreira"<br>
+              "Remove options 3 and 4"<br>
+              "Option 2 price is R38,500 pp, total R77,000"
+            </div>
+          </div>
+
+          <!-- Input -->
+          <div class="chat-input-wrap">
+            <input type="text" id="chat-input" placeholder="e.g. Change client to Mr &amp; Mrs Ferreira…"/>
+            <button id="chat-send">Apply</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Scripts -->
+<script src="/js/template.js"></script>
+<script src="/js/app.js"></script>
+
+<!-- Update quote info card when editor opens -->
+<script>
+  // Patch App.init to also update the quote info card
+  const _origInit = App.init.bind(App);
+  // We hook into renderChatHistory to also update the info card
+  // Actually we patch showView via MutationObserver
+  const infoObs = new MutationObserver(() => {
+    const editorEl = document.getElementById('view-editor');
+    if (editorEl && !editorEl.hidden) {
+      // Try to get quoteData from app state via a custom event or direct access
+      // Since App is a closure, we expose a refresh hook via custom event
+    }
+  });
+  infoObs.observe(document.getElementById('view-editor') || document.body, { attributes: true });
+
+  // Listen for quoteReady event dispatched by app.js
+  document.addEventListener('quoteReady', (e) => {
+    const qd = e.detail;
+    if (!qd) return;
+    const title = (qd.clientTitle ? qd.clientTitle + ' ' : '') + (qd.clientName || 'Client');
+    document.getElementById('qi-dest').textContent =
+      (qd.destination || 'Quote') + ' — ' + title;
+    document.getElementById('qi-meta').textContent =
+      [qd.dates, qd.adults ? qd.adults + ' adults' : '', qd.occasion]
+        .filter(Boolean).join(' · ');
+  });
+</script>
+
+</body>
+</html>
