@@ -150,6 +150,17 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 #chat-send:hover{background:var(--pink-dark)}
 #chat-send:disabled{background:var(--gray-400);cursor:not-allowed}
 
+/* Markup tool card */
+.markup-card{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);padding:14px 16px;box-shadow:var(--shadow)}
+.markup-label{font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.markup-row{display:flex;gap:8px;align-items:center}
+.markup-input{width:80px;padding:9px 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;font-family:inherit;color:var(--gray-900);outline:none;text-align:center;transition:border-color .15s}
+.markup-input:focus{border-color:var(--pink)}
+.markup-suffix{font-size:14px;font-weight:600;color:var(--gray-500);margin-left:-4px}
+.markup-btn{padding:9px 16px;background:var(--pink);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s}
+.markup-btn:hover{background:var(--pink-dark)}
+.markup-hint{font-size:11.5px;color:var(--gray-400);margin-top:8px;line-height:1.5}
+
 /* ── Responsive ── */
 @media(max-width:900px){
   .editor-layout{grid-template-columns:1fr;height:auto}
@@ -228,6 +239,17 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
               </div>
             </div>
 
+            <div class="form-row">
+              <div class="form-group">
+                <label>Phone</label>
+                <input type="tel" id="f-phone" placeholder="e.g. 082 555 1234"/>
+              </div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="f-email" placeholder="e.g. client@email.com"/>
+              </div>
+            </div>
+
             <div class="form-group">
               <label>Occasion</label>
               <input type="text" id="f-occasion" placeholder="e.g. Anniversary, Birthday, Honeymoon"/>
@@ -281,6 +303,8 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
                 <option value="48" selected>48 hours</option>
                 <option value="72">72 hours</option>
                 <option value="168">7 days</option>
+                <option value="336">14 days</option>
+                <option value="720">30 days</option>
               </select>
             </div>
 
@@ -343,6 +367,13 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
         <div class="qlink-card">
           <div class="qlink-label">&#128279; Client Quote Link</div>
           <div id="quote-link-section"><span class="qlink-saving">Generating link…</span></div>
+          <div id="wa-btn-section" style="display:none;margin-top:10px">
+            <a id="wa-btn" href="#" target="_blank" rel="noopener"
+               style="display:inline-flex;align-items:center;gap:7px;background:#25d366;color:#fff;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;transition:background .15s"
+               onmouseover="this.style.background='#1ebe5d'" onmouseout="this.style.background='#25d366'">
+              &#128241; Send via WhatsApp
+            </a>
+          </div>
           <div id="edit-link-section" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--gray-100)">
             <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">&#9998; Edit Link (for you)</div>
             <div class="qlink-row">
@@ -350,6 +381,17 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
               <button class="qlink-copy" id="edit-link-copy" style="font-size:11px;padding:7px 10px">Copy</button>
             </div>
           </div>
+        </div>
+
+        <!-- Price Markup tool -->
+        <div class="markup-card">
+          <div class="markup-label">&#128181; Price Markup</div>
+          <div class="markup-row">
+            <input type="number" id="markup-pct" class="markup-input" placeholder="0" min="0" max="100" step="0.5"/>
+            <span class="markup-suffix">%</span>
+            <button class="markup-btn" id="markup-apply-btn">Apply Markup</button>
+          </div>
+          <p class="markup-hint">Applies a percentage increase to all option prices. Enter 15 to add 15% to every price.</p>
         </div>
 
         <!-- AI Edit chat -->

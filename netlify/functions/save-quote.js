@@ -35,9 +35,14 @@ exports.handler = async (event) => {
       quoteData,
       logoBase64: logoBase64 || null,
       createdAt:  new Date().toISOString(),
-      clientName: quoteData.clientName  || 'Unknown',
+      clientName:  quoteData.clientName  || 'Unknown',
       destination: quoteData.destination || 'Unknown',
       dates:       quoteData.dates       || '',
+      phone:       quoteData.phone       || '',
+      email:       quoteData.email       || '',
+      occasion:    quoteData.occasion    || '',
+      adults:      quoteData.adults      || '',
+      children:    quoteData.children    || '',
     };
 
     // setJSON returns the actual storage key (gist ID in prod, may differ from inputId for new quotes)

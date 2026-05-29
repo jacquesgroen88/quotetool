@@ -51,6 +51,11 @@ exports.handler = async (event) => {
             createdAt:   record.createdAt   || '',
             quoteUrl:    `${siteUrl}/.netlify/functions/view-quote?id=${key}`,
             optionCount: record.quoteData?.options?.length || 0,
+            phone:       record.phone       || '',
+            email:       record.email       || '',
+            occasion:    record.occasion    || '',
+            adults:      record.adults      || '',
+            children:    record.children    || '',
           };
         } catch {
           return { quoteId: key, clientName: 'Error loading', createdAt: '' };

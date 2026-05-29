@@ -2,7 +2,7 @@
 
 > **Live site:** https://izitravelquotes.netlify.app/  
 > **GitHub:** https://github.com/jacquesgroen88/quotetool  
-> **Last updated:** 2026-05-28
+> **Last updated:** 2026-05-29
 
 ---
 
@@ -42,7 +42,7 @@ izitravel-quote-tool/
 │       ├── save-quote.js          ← Save quote → returns shareable URL
 │       ├── view-quote.js          ← Serve saved quote as HTML page (client-facing)
 │       ├── admin-quotes.js        ← List all quotes (password protected)
-│       └── _store.js              ← Storage abstraction: filesystem locally, Netlify Blobs in prod
+│       └── _store.js              ← Storage abstraction: filesystem locally, GitHub Gist API in prod
 ├── netlify.toml                   ← Build config, functions dir, dev port 3002
 ├── package.json                   ← Dependencies: pdf-parse, mammoth, @netlify/blobs, uuid
 ├── .env                           ← Local secrets (gitignored — see Environment Variables below)
@@ -137,9 +137,15 @@ All functions are CommonJS v1 (`exports.handler = async (event) => {}`). They se
 
 Abstracts quote persistence:
 - **Local dev:** Saves JSON files to `.netlify/blobs-local/[uuid].json`
-- **Production (Netlify):** Uses `@netlify/blobs` (requires `NETLIFY=true` and `SITE_ID` env vars, set automatically by Netlify)
+- **Production (Netlify):** Uses GitHub Gist API via Node's built-in `https` module (requires `GITHUB_TOKEN` env var)
+  - Each quote = one **secret** gist containing a single file `quote.json`
+  - Gist ID is used as the `quoteId` (replaces UUID in prod)
+  - Logo is NOT stored in the gist — served from `/assets/izilogo.jpg`
 
-Detection: `isProduction()` checks `process.env.NETLIFY && !process.env.NETLIFY_DEV`. `NETLIFY_DEV` is only set during `netlify dev`, not in production.
+Detection: `isProduction()` checks `!!process.env.GITHUB_TOKEN`. **Do NOT use `process.env.NETLIFY`** — it is only available during the build step, not at Lambda function runtime.
+
+**Required env vars for production:**
+- `GITHUB_TOKEN` — Personal Access Token with **gist** scope. Create at https://github.com/settings/tokens → New classic token → check "gist". Set in Netlify dashboard → Site configuration → Environment variables.
 
 ---
 
@@ -335,3 +341,40 @@ Supplier PDFs for testing live at:
 - **Added:** Edit Link shown in the link card (for Terri's own bookmarking)
 - **Added:** Admin table now shows Edit ✏ link alongside View ↗ button
 - **Fixed:** `_store.js` production detection bug — now uses `NETLIFY && !NETLIFY_DEV`
+
+### Session 4b — GitHub Gist storage + critical production fixes
+> **Root cause of all 502 errors:** Netlify Blobs v10 `getStore()` returns empty context `{}` when `event.blobs` is absent (Lambda runtime), causing all HTTP calls to hang → 502. Replaced entirely with GitHub Gist API.
+
+**Critical bugs found & fixed (must not repeat):**
+
+| Bug | Root cause | Fix |
+|---|---|---|
+| `require('uuid')` → 502 | `uuid` v14 is ESM-only — crashes CommonJS module at load time | Use `const { randomUUID } = require('crypto')` (Node built-in) |
+| `process.env.NETLIFY` → ENOENT | `NETLIFY` env var only present during BUILD, not at Lambda runtime | Use `!!process.env.GITHUB_TOKEN` to detect production |
+| `fs.readFileSync('/public/js/template.js')` → ENOENT | `public/` is NOT on the Lambda filesystem | Load template via `<script src="...">` URL |
+| `fetch` to `api.github.com` → "fetch failed" | Node 18 `fetch` (undici) has reliability issues from some Lambda IPs | Use Node's built-in `https` module directly |
+| CSS `content:'&#9660;'` → literal text | HTML entities in CSS `content:` render as literal characters | Use actual Unicode chars: `▼`, `▶` |
+| CSS `content:'\25BC'` → SyntaxError | Octal/hex escapes in JS template literals are illegal | Double-escape: `'\\25BC'` or use literal Unicode char |
+| Logo stored in gist → slow/oversized | 80KB base64 in every gist payload | Serve logo from `/assets/izilogo.jpg` static site, pass as URL |
+| `@netlify/blobs` → 502 | `connectLambda` throws when `event.blobs` absent; `getStore()` silently returns empty context → HTTP calls hang | Replaced with GitHub Gist + `https` module |
+
+**Storage architecture (production):**
+- GitHub Gist API: each quote = one secret gist with `quote.json` file
+- Detection: `!!process.env.GITHUB_TOKEN` (set in Netlify dashboard, never hardcode)
+- Gist ID (20-40 hex chars) is used as the `quoteId` — returned from `setJSON()`, stored in `state.editQuoteId`
+- Logo served from `/assets/izilogo.jpg` — NOT stored in gist (80KB savings per quote)
+- Local dev: filesystem at `.netlify/blobs-local/`
+
+### Session 5 — Admin improvements + productivity features
+- **Added:** Phone and email fields to the quote form (collected in `clientDetails`, stored in quoteData + gist record, shown in admin)
+- **Added:** Admin collapsible "Details ▾" row — expands to show phone (tel: link), email (mailto: link), occasion, adults, children
+- **Added:** Admin search bar — live filter by client name or destination
+- **Added:** Admin period filter — All time / Today / This week / This month
+- **Added:** Admin sort order — Newest first / Oldest first / Client A–Z
+- **Added:** Filter count indicator ("Showing X of Y")
+- **Added:** CSV export button — downloads all quotes including phone/email as `.csv`
+- **Added:** "Duplicate ⧉" button in admin — opens `/?duplicate=UUID` which loads quote into editor as new (no `editQuoteId` set, saves fresh gist)
+- **Added:** WhatsApp send button (green, `wa.me/?text=...`) — appears in link card after quote is saved
+- **Added:** Price markup tool in editor panel — enter % → applies to all `pricePerPerson` and `totalPrice` fields, auto-saves
+- **Added:** Quote validity options extended to 14 days (336h) and 30 days (720h)
+- **Fixed:** New-quote reset now clears phone/email fields and hides WhatsApp button

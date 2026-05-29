@@ -81,6 +81,38 @@ const App = (() => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  // ── Price markup ──────────────────────────────────────────────────────────
+  function applyMarkup() {
+    if (!state.quoteData) return;
+    const pctStr = ($('markup-pct') || {}).value;
+    const pct = parseFloat(pctStr);
+    if (isNaN(pct) || pct <= 0) { alert('Please enter a markup percentage greater than 0.'); return; }
+    const multiplier = 1 + pct / 100;
+
+    function markupPrice(priceStr) {
+      if (!priceStr) return priceStr;
+      // Strip R, spaces, commas, ZAR prefix, then parse
+      const num = parseFloat(String(priceStr).replace(/[^0-9.]/g, ''));
+      if (isNaN(num)) return priceStr;
+      const newNum = Math.round(num * multiplier);
+      // Reformat with thousands separator
+      return 'R' + newNum.toLocaleString('en-ZA');
+    }
+
+    const updated = { ...state.quoteData };
+    updated.options = (updated.options || []).map(opt => ({
+      ...opt,
+      pricePerPerson: markupPrice(opt.pricePerPerson),
+      totalPrice:     markupPrice(opt.totalPrice),
+    }));
+    state.quoteData = updated;
+    refreshPreview();
+    if (state.editQuoteId) saveQuoteLink(state.quoteData, true);
+
+    const btn = $('markup-apply-btn');
+    if (btn) { btn.textContent = '✓ Applied!'; setTimeout(() => { btn.textContent = 'Apply Markup'; }, 2000); }
+  }
+
   // ── Auto-detect ────────────────────────────────────────────────────────────
   async function runDetect(file) {
     try {
@@ -121,6 +153,8 @@ const App = (() => {
       children:      $('f-children').value.trim(),
       personalNote:  $('f-personalNote').value.trim(),
       quoteValidity: $('f-validity').value.trim(),
+      phone:         $('f-phone').value.trim(),
+      email:         $('f-email').value.trim(),
     };
 
     showView('view-generating');
@@ -145,6 +179,8 @@ const App = (() => {
         if (clientDetails.children)      qd.children      = clientDetails.children;
         if (clientDetails.personalNote)  qd.personalNote  = clientDetails.personalNote;
         if (clientDetails.quoteValidity) qd.quoteValidity = clientDetails.quoteValidity;
+        if (clientDetails.phone)         qd.phone         = clientDetails.phone;
+        if (clientDetails.email)         qd.email         = clientDetails.email;
         state.quoteData    = qd;
         state.chatMessages = [];
         renderChatHistory();
@@ -189,17 +225,18 @@ const App = (() => {
     }
   }
 
-  // ── Load saved quote for editing (called when ?edit=UUID in URL) ───────────
-  async function loadQuoteForEdit(quoteId) {
+  // ── Load saved quote for editing (called when ?edit=UUID or ?duplicate=UUID in URL) ───
+  // asNew=true → treats it as a new quote (duplicate flow — does not set editQuoteId)
+  async function loadQuoteForEdit(quoteId, { asNew = false } = {}) {
     showView('view-generating');
-    setStatus('Loading saved quote…');
+    setStatus(asNew ? 'Duplicating quote…' : 'Loading saved quote…');
     try {
       const res  = await fetch(`/.netlify/functions/load-quote?id=${encodeURIComponent(quoteId)}`);
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Quote not found');
 
       state.quoteData    = data.quoteData;
-      state.editQuoteId  = data.quoteId || quoteId;
+      state.editQuoteId  = asNew ? null : (data.quoteId || quoteId);
       if (data.logoBase64) state.logoBase64 = data.logoBase64;
       state.chatMessages = [];
       renderChatHistory();
@@ -207,11 +244,17 @@ const App = (() => {
       showView('view-editor');
       document.dispatchEvent(new CustomEvent('quoteReady', { detail: data.quoteData }));
 
-      // Set the existing view link (don't regenerate — same UUID, same URL)
-      const siteUrl  = location.origin;
-      const viewUrl  = `${siteUrl}/.netlify/functions/view-quote?id=${state.editQuoteId}`;
-      state.quoteUrl = viewUrl;
-      setQuoteLink(viewUrl);
+      if (asNew) {
+        // Duplicate — save as a brand new record
+        setQuoteLink(null);
+        saveQuoteLink(data.quoteData);
+      } else {
+        // Edit — reuse existing view link
+        const siteUrl  = location.origin;
+        const viewUrl  = `${siteUrl}/.netlify/functions/view-quote?id=${state.editQuoteId}`;
+        state.quoteUrl = viewUrl;
+        setQuoteLink(viewUrl);
+      }
     } catch (err) {
       showView('view-upload');
       alert('Could not load saved quote: ' + (err.message || 'Unknown error'));
@@ -243,6 +286,15 @@ const App = (() => {
         setTimeout(() => { $('qlink-copy').textContent = 'Copy Link'; }, 2000);
       });
     });
+
+    // WhatsApp button
+    const waSection = $('wa-btn-section');
+    const waBtn     = $('wa-btn');
+    if (waSection && waBtn) {
+      const waText = encodeURIComponent('Hi! Here is your IziTravel quote: ' + url);
+      waBtn.href = `https://wa.me/?text=${waText}`;
+      waSection.style.display = 'block';
+    }
 
     // Also populate the edit link (for Terri to come back and edit)
     if (state.editQuoteId) {
@@ -402,9 +454,12 @@ const App = (() => {
     initDropZone();
     initQuickChips();
 
-    // Check for ?edit=UUID in URL — load existing saved quote into editor
-    const editId = new URLSearchParams(location.search).get('edit');
-    if (editId) loadQuoteForEdit(editId);
+    // Check for ?edit=UUID or ?duplicate=UUID in URL
+    const params      = new URLSearchParams(location.search);
+    const editId      = params.get('edit');
+    const duplicateId = params.get('duplicate');
+    if (editId)      loadQuoteForEdit(editId);
+    else if (duplicateId) loadQuoteForEdit(duplicateId, { asNew: true });
 
     // Generate button
     const genBtn = $('generate-btn');
@@ -427,6 +482,10 @@ const App = (() => {
       }
     });
 
+    // Markup apply button
+    const markupBtn = $('markup-apply-btn');
+    if (markupBtn) markupBtn.addEventListener('click', applyMarkup);
+
     // Download button
     const dlBtn = $('download-btn');
     if (dlBtn) dlBtn.addEventListener('click', downloadQuote);
@@ -446,11 +505,14 @@ const App = (() => {
       if (zone) zone.innerHTML = dropZoneDefault;
       // Reset form
       ['f-clientName','f-clientTitle','f-occasion','f-destination','f-dates',
-       'f-adults','f-children','f-personalNote'].forEach(id => {
+       'f-adults','f-children','f-personalNote','f-phone','f-email'].forEach(id => {
         const el = $(id);
         if (el) el.value = '';
       });
       $('f-validity').value = '48';
+      // Hide WhatsApp button
+      const waSection = $('wa-btn-section');
+      if (waSection) waSection.style.display = 'none';
       $('detect-status').textContent = '';
       showView('view-upload');
     });
