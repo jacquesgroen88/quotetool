@@ -17,8 +17,10 @@ const GIST_FILE      = 'quote.json';
 const GIST_TAG       = 'izitravel-quote'; // prefix used to identify our gists
 
 // ── Environment detection ───────────────────────────────────────────────────
+// Use GITHUB_TOKEN presence as the signal — it's only set in production (Netlify dashboard).
+// process.env.NETLIFY is available during build but NOT reliably at function runtime.
 function isProduction() {
-  return !!(process.env.NETLIFY && !process.env.NETLIFY_DEV);
+  return !!process.env.GITHUB_TOKEN;
 }
 
 function ensureDir() {

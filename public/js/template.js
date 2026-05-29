@@ -296,8 +296,8 @@ body{font-family:'Inter',sans-serif;background:#fff;color:var(--gray-900);line-h
 .desc-details{border:1px solid var(--gray-200);border-radius:9px;overflow:hidden}
 .desc-summary{display:block;padding:9px 14px;font-size:12px;font-weight:600;color:var(--gray-500);cursor:pointer;user-select:none;list-style:none}
 .desc-summary::-webkit-details-marker{display:none}
-.desc-summary::before{content:'&#9654; ';font-size:9px;margin-right:4px;transition:transform .15s}
-.desc-details[open] .desc-summary::before{content:'&#9660; '}
+.desc-summary::before{content:'\25B6\00A0';font-size:9px;margin-right:4px;transition:transform .15s}
+.desc-details[open] .desc-summary::before{content:'\25BC\00A0'}
 .resort-desc{padding:12px 14px;font-size:13px;color:var(--gray-500);line-height:1.75;border-top:1px solid var(--gray-100)}
 
 .select-btn{width:100%;padding:14px;background:var(--pink);color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s,transform .1s;letter-spacing:-.01em}
