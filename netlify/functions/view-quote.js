@@ -1,16 +1,4 @@
 const store = require('./_store');
-const fs   = require('fs');
-const path = require('path');
-
-try {
-  const envPath = path.resolve(__dirname, '../../.env');
-  if (fs.existsSync(envPath)) {
-    fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
-      const m = line.match(/^([^#=]+)=(.*)$/);
-      if (m && !process.env[m[1].trim()]) process.env[m[1].trim()] = m[2].trim();
-    });
-  }
-} catch {}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') {
@@ -37,10 +25,10 @@ exports.handler = async (event) => {
       };
     }
 
-    // Read the client-side template.js and inline it
-    const templatePath = path.resolve(__dirname, '../../public/js/template.js');
-    const templateJs   = fs.readFileSync(templatePath, 'utf8');
-
+    // Load template.js from the static site — avoids fs.readFileSync which fails
+    // in Netlify Lambda (public/ is not on the function filesystem).
+    // document.open() preserves the window scope so buildQuoteHTML stays defined.
+    const siteUrl = process.env.URL || process.env.DEPLOY_URL || '';
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,8 +38,8 @@ exports.handler = async (event) => {
 </head>
 <body>
 <script id="quotePayload" type="application/json">${JSON.stringify({ quoteData: record.quoteData, logoBase64: record.logoBase64 })}</script>
+<script src="${siteUrl}/js/template.js"></script>
 <script>
-${templateJs}
 (function(){
   var payload = JSON.parse(document.getElementById('quotePayload').textContent);
   var html = buildQuoteHTML(payload.quoteData, payload.logoBase64);
