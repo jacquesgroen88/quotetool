@@ -25,10 +25,10 @@ exports.handler = async (event) => {
       };
     }
 
-    // Load template.js from the static site — avoids fs.readFileSync which fails
-    // in Netlify Lambda (public/ is not on the function filesystem).
-    // document.open() preserves the window scope so buildQuoteHTML stays defined.
-    const siteUrl = process.env.URL || process.env.DEPLOY_URL || '';
+    // Logo is NOT stored in the gist — always serve from the static site.
+    const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://izitravelquotes.netlify.app';
+    const logoUrl = `${siteUrl}/assets/izilogo.jpg`;
+
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,7 +37,7 @@ exports.handler = async (event) => {
 <title>IziTravel Quote — ${esc(record.clientName)} — ${esc(record.destination)}</title>
 </head>
 <body>
-<script id="quotePayload" type="application/json">${JSON.stringify({ quoteData: record.quoteData, logoBase64: record.logoBase64 })}</script>
+<script id="quotePayload" type="application/json">${JSON.stringify({ quoteData: record.quoteData, logoBase64: logoUrl })}</script>
 <script src="${siteUrl}/js/template.js"></script>
 <script>
 (function(){

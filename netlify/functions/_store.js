@@ -1,24 +1,26 @@
 /**
  * Quote storage abstraction
  *
- * Production (Netlify): GitHub Gist API
+ * Production (Netlify): GitHub Gist API via Node https module
  *   Requires: GITHUB_TOKEN env var (Personal Access Token with "gist" scope)
  *   Create at: https://github.com/settings/tokens → New classic token → check "gist"
  *   Then set GITHUB_TOKEN in Netlify dashboard → Site configuration → Environment variables
  *
  * Local dev (netlify dev): filesystem in .netlify/blobs-local/
+ *
+ * NOTE: Uses Node's built-in https module (not native fetch / undici) because
+ * undici has reliability issues connecting to api.github.com from some Lambda IPs.
  */
-const fs   = require('fs');
-const path = require('path');
+const fs    = require('fs');
+const path  = require('path');
+const https = require('https');
 
-const LOCAL_DIR      = path.resolve(__dirname, '../../.netlify/blobs-local');
-const GITHUB_API     = 'https://api.github.com';
-const GIST_FILE      = 'quote.json';
-const GIST_TAG       = 'izitravel-quote'; // prefix used to identify our gists
+const LOCAL_DIR = path.resolve(__dirname, '../../.netlify/blobs-local');
+const GH_HOST   = 'api.github.com';
+const GIST_FILE = 'quote.json';
+const GIST_TAG  = 'izitravel-quote';
 
 // ── Environment detection ───────────────────────────────────────────────────
-// Use GITHUB_TOKEN presence as the signal — it's only set in production (Netlify dashboard).
-// process.env.NETLIFY is available during build but NOT reliably at function runtime.
 function isProduction() {
   return !!process.env.GITHUB_TOKEN;
 }
@@ -28,23 +30,57 @@ function ensureDir() {
 }
 
 function isGistId(key) {
-  // GitHub gist IDs are 20–40 hex chars
   return /^[0-9a-f]{20,40}$/i.test(key);
 }
 
-// ── GitHub Gist helpers ─────────────────────────────────────────────────────
-function ghHeaders() {
+// ── https helpers ───────────────────────────────────────────────────────────
+function ghBaseHeaders(token) {
   return {
-    'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
-    'Accept':        'application/vnd.github.v3+json',
-    'Content-Type':  'application/json',
+    'Authorization':        `Bearer ${token}`,
+    'Accept':               'application/vnd.github.v3+json',
+    'User-Agent':           'IziTravel-Quote-Tool/1.0',
     'X-GitHub-Api-Version': '2022-11-28',
-    'User-Agent':    'IziTravel-Quote-Tool/1.0',
   };
 }
 
+/**
+ * Make an HTTPS request to api.github.com.
+ * Returns { status, body (string) }.
+ * Throws on network error or timeout (8 s).
+ */
+function ghRequest(method, path_, token, payload) {
+  return new Promise((resolve, reject) => {
+    const bodyBuf = payload ? Buffer.from(JSON.stringify(payload), 'utf8') : null;
+    const headers = {
+      ...ghBaseHeaders(token),
+      'Content-Type': 'application/json',
+    };
+    if (bodyBuf) headers['Content-Length'] = bodyBuf.length;
+
+    const req = https.request(
+      {
+        hostname: GH_HOST,
+        path:     path_,
+        method,
+        headers,
+      },
+      (res) => {
+        let body = '';
+        res.on('data', (c) => { body += c; });
+        res.on('end',  () => resolve({ status: res.statusCode, body }));
+      }
+    );
+
+    req.on('error', (err) => reject(new Error(`GitHub HTTPS error: ${err.message}`)));
+    req.setTimeout(8000, () => { req.destroy(); reject(new Error('GitHub API timed out after 8 s')); });
+
+    if (bodyBuf) req.write(bodyBuf);
+    req.end();
+  });
+}
+
 function gistDescription(record) {
-  const opts = (record.quoteData?.options || []).length;
+  const opts  = (record.quoteData?.options || []).length;
   const parts = [
     GIST_TAG,
     record.clientName  || 'Unknown',
@@ -56,75 +92,48 @@ function gistDescription(record) {
   return parts.join('|');
 }
 
-async function ghFetch(url, options) {
-  // Abort after 8 s so Netlify never kills us silently with a 502
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 8000);
-  let res;
-  try {
-    res = await fetch(url, { ...options, signal: ctrl.signal });
-  } catch (err) {
-    throw new Error(`GitHub API request failed: ${err.message}`);
-  } finally {
-    clearTimeout(timer);
-  }
-  if (!res.ok) {
-    let body = '';
-    try { body = await res.text(); } catch {}
-    throw new Error(`GitHub API ${res.status}: ${body.slice(0, 300)}`);
-  }
-  return res;
-}
-
 // ── Public API ──────────────────────────────────────────────────────────────
 
-// Legacy no-op — no longer needed (replaced Netlify Blobs with GitHub Gists)
-function init() {}
+function init() {} // no-op — kept for compatibility
 
 /**
  * Save or update a quote record.
- * Returns: the actual storage key (gist ID in prod, same key locally).
- * The returned key may differ from the input key for new quotes in production.
+ * logoBase64 is NOT stored in the gist — it's always loaded from the static site.
+ * Returns the actual storage key (gist ID in prod, same key locally).
  */
 async function setJSON(key, value) {
   if (isProduction()) {
     const token = process.env.GITHUB_TOKEN;
-    if (!token) {
-      throw new Error(
-        'GITHUB_TOKEN not set. Go to github.com/settings/tokens, create a classic token ' +
-        'with "gist" scope, then add GITHUB_TOKEN in Netlify dashboard → Site configuration → ' +
-        'Environment variables. Redeploy after saving.'
-      );
-    }
+    if (!token) throw new Error('GITHUB_TOKEN not set.');
 
-    const desc    = gistDescription(value);
-    const content = JSON.stringify(value);
+    // Strip logo before saving — always served from /assets/izilogo.jpg
+    const { logoBase64: _logo, ...record } = value;
+    const desc    = gistDescription(record);
+    const content = JSON.stringify(record);
 
     if (isGistId(key)) {
-      // Update existing gist in-place
-      await ghFetch(`${GITHUB_API}/gists/${key}`, {
-        method:  'PATCH',
-        headers: ghHeaders(),
-        body:    JSON.stringify({
-          description: desc,
-          files: { [GIST_FILE]: { content } },
-        }),
+      // Update existing gist
+      const { status, body } = await ghRequest('PATCH', `/gists/${key}`, token, {
+        description: desc,
+        files: { [GIST_FILE]: { content } },
       });
+      if (status < 200 || status >= 300) {
+        throw new Error(`GitHub API PATCH ${status}: ${body.slice(0, 200)}`);
+      }
       return key;
     }
 
-    // Create new (secret) gist
-    const res  = await ghFetch(`${GITHUB_API}/gists`, {
-      method:  'POST',
-      headers: ghHeaders(),
-      body:    JSON.stringify({
-        description: desc,
-        public:      false,
-        files:       { [GIST_FILE]: { content } },
-      }),
+    // Create new secret gist
+    const { status, body } = await ghRequest('POST', '/gists', token, {
+      description: desc,
+      public:      false,
+      files:       { [GIST_FILE]: { content } },
     });
-    const data = await res.json();
-    return data.id; // gist ID becomes the quoteId
+    if (status < 200 || status >= 300) {
+      throw new Error(`GitHub API POST ${status}: ${body.slice(0, 200)}`);
+    }
+    const data = JSON.parse(body);
+    return data.id;
   }
 
   // Local dev: filesystem
@@ -134,7 +143,7 @@ async function setJSON(key, value) {
 }
 
 /**
- * Retrieve a quote record by key (gist ID in prod, filename locally).
+ * Retrieve a quote record by key.
  * Returns null if not found.
  */
 async function getJSON(key) {
@@ -142,23 +151,12 @@ async function getJSON(key) {
     const token = process.env.GITHUB_TOKEN;
     if (!token) throw new Error('GITHUB_TOKEN not set');
 
-    // Use raw fetch with timeout for getJSON so we can handle 404 without throwing
-    const ctrl  = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
-    let res;
-    try {
-      res = await fetch(`${GITHUB_API}/gists/${key}`, { headers: ghHeaders(), signal: ctrl.signal });
-    } catch (err) {
-      throw new Error(`GitHub API request failed: ${err.message}`);
-    } finally {
-      clearTimeout(timer);
+    const { status, body } = await ghRequest('GET', `/gists/${key}`, token, null);
+    if (status === 404) return null;
+    if (status < 200 || status >= 300) {
+      throw new Error(`GitHub API GET ${status}: ${body.slice(0, 200)}`);
     }
-    if (res.status === 404) return null;
-    if (!res.ok) {
-      let body = ''; try { body = await res.text(); } catch {}
-      throw new Error(`GitHub API ${res.status}: ${body.slice(0, 200)}`);
-    }
-    const data    = await res.json();
+    const data    = JSON.parse(body);
     const content = data.files?.[GIST_FILE]?.content;
     if (!content) return null;
     return JSON.parse(content);
@@ -171,29 +169,21 @@ async function getJSON(key) {
 }
 
 /**
- * List all quote keys.
- * In production: returns gist IDs for all izitravel-quote gists (paginates).
+ * List all quote keys (gist IDs in prod, filenames locally).
  */
 async function listAll() {
   if (isProduction()) {
     const token = process.env.GITHUB_TOKEN;
     if (!token) throw new Error('GITHUB_TOKEN not set');
 
-    const ids = [];
-    let page  = 1;
+    const ids  = [];
+    let   page = 1;
     while (true) {
-      const ctrl2 = new AbortController();
-      const t2 = setTimeout(() => ctrl2.abort(), 8000);
-      let res;
-      try {
-        res = await fetch(`${GITHUB_API}/gists?per_page=100&page=${page}`, { headers: ghHeaders(), signal: ctrl2.signal });
-      } catch { break; } finally { clearTimeout(t2); }
-      if (!res.ok) break;
-      const gists = await res.json();
+      const { status, body } = await ghRequest('GET', `/gists?per_page=100&page=${page}`, token, null);
+      if (status < 200 || status >= 300) break;
+      const gists = JSON.parse(body);
       for (const g of gists) {
-        if (g.description && g.description.startsWith(GIST_TAG + '|')) {
-          ids.push(g.id);
-        }
+        if (g.description && g.description.startsWith(GIST_TAG + '|')) ids.push(g.id);
       }
       if (gists.length < 100) break;
       page++;
@@ -201,7 +191,6 @@ async function listAll() {
     return ids;
   }
 
-  // Local dev
   ensureDir();
   return fs.readdirSync(LOCAL_DIR)
     .filter(f => f.endsWith('.json'))
