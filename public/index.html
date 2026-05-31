@@ -396,12 +396,9 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 
         <!-- AI Edit chat -->
         <div class="chat-card">
-          <div class="chat-header" style="display:flex;align-items:center;justify-content:space-between">
-            <div>
-              <h3>✏️ Edit Assistant</h3>
-              <p>Describe any change — the quote updates instantly.</p>
-            </div>
-            <button id="undo-btn" title="Undo last AI change" style="display:none;padding:6px 12px;background:#fff;color:var(--gray-700);border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;white-space:nowrap" onmouseover="this.style.borderColor='var(--pink)';this.style.color='var(--pink)'" onmouseout="this.style.borderColor='var(--gray-200)';this.style.color='var(--gray-700)'">↩ Undo</button>
+          <div class="chat-header">
+            <h3>✏️ Edit Assistant</h3>
+            <p>Describe any change — the quote updates instantly.</p>
           </div>
 
           <!-- Quick chips -->
@@ -429,7 +426,10 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
           <!-- Input -->
           <div class="chat-input-wrap">
             <input type="text" id="chat-input" placeholder="e.g. Change client to Mr &amp; Mrs Ferreira…"/>
-            <button id="chat-send">Apply</button>
+            <button id="chat-send">Apply Change</button>
+          </div>
+          <div style="padding:0 12px 10px;display:flex;justify-content:flex-end">
+            <button id="undo-btn" style="display:none;padding:6px 14px;background:#fff;color:var(--gray-500);border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--pink)';this.style.color='var(--pink)'" onmouseout="this.style.borderColor='var(--gray-200)';this.style.color='var(--gray-500)'">↩ Undo Last Change</button>
           </div>
         </div>
 
