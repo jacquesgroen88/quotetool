@@ -2,7 +2,7 @@
 // Builds a fully self-contained branded HTML quote from structured data.
 // Runs client-side; logo is passed as a base64 data URL.
 
-const WEBHOOK_URL  = 'https://hook.eu2.make.com/bjdc1oe65zcqw7k5fckx592fssqh5upv';
+const WEBHOOK_URL  = '/.netlify/functions/quote-accepted';
 const AGENT_PHONE  = '+27 82 967 2060';
 const AGENT_EMAIL  = 'terrib@izitravel.co.za';
 const AGENT_OFFICE = '+27 16 023 0214';
@@ -501,7 +501,6 @@ ${exclHTML}
           selectedOption: selOpt,
           submittedName:name, email:email, phone:phone, message:msg,
         }),
-        mode:'cors',
       });
     } catch(e){}
     document.getElementById('modalBody').innerHTML =
