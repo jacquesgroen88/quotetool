@@ -501,7 +501,7 @@ ${exclHTML}
           selectedOption: selOpt,
           submittedName:name, email:email, phone:phone, message:msg,
         }),
-        mode:'no-cors',
+        mode:'cors',
       });
     } catch(e){}
     document.getElementById('modalBody').innerHTML =
