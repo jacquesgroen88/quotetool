@@ -2,7 +2,7 @@
 // Builds a fully self-contained branded HTML quote from structured data.
 // Runs client-side; logo is passed as a base64 data URL.
 
-const WEBHOOK_URL  = 'https://hook.eu2.make.com/5it7lfymupsatg8sht6wg536bj35v6jy';
+const WEBHOOK_URL  = 'https://hook.eu2.make.com/bjdc1oe65zcqw7k5fckx592fssqh5upv';
 const AGENT_PHONE  = '+27 82 967 2060';
 const AGENT_EMAIL  = 'terrib@izitravel.co.za';
 const AGENT_OFFICE = '+27 16 023 0214';
