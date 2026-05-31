@@ -381,11 +381,7 @@ const App = (() => {
     if (state.chatMessages.length === 0) {
       el.innerHTML = `<div class="chat-empty">
         No changes yet.<br>
-        Use the chips above or type a change below.<br><br>
-        <strong>Examples:</strong><br>
-        "Change client to Mrs Ferreira"<br>
-        "Remove options 3 and 4"<br>
-        "Option 2 price is R38,500 pp, total R77,000"
+        Use the chips above or type a change below.
       </div>`;
       return;
     }
