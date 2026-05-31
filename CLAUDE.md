@@ -2,7 +2,7 @@
 
 > **Live site:** https://izitravelquotes.netlify.app/  
 > **GitHub:** https://github.com/jacquesgroen88/quotetool  
-> **Last updated:** 2026-05-29
+> **Last updated:** 2026-05-31
 
 ---
 
@@ -39,6 +39,7 @@ izitravel-quote-tool/
 │       ├── detect.js              ← Auto-detect client details from supplier doc
 │       ├── generate.js            ← Extract + structure full quote data via AI
 │       ├── edit.js                ← Apply natural-language changes to quote JSON
+│       ├── quote-accepted.js      ← Proxy for quote acceptance → forwards to Make.com server-side
 │       ├── save-quote.js          ← Save quote → returns shareable URL
 │       ├── view-quote.js          ← Serve saved quote as HTML page (client-facing)
 │       ├── admin-quotes.js        ← List all quotes (password protected)
@@ -364,6 +365,43 @@ Supplier PDFs for testing live at:
 - Gist ID (20-40 hex chars) is used as the `quoteId` — returned from `setJSON()`, stored in `state.editQuoteId`
 - Logo served from `/assets/izilogo.jpg` — NOT stored in gist (80KB savings per quote)
 - Local dev: filesystem at `.netlify/blobs-local/`
+
+### Session 6 — Make.com quote acceptance integration + proxy fix
+
+**What was built:**
+- Dedicated Make.com webhook + scenario "IziTravel — Quote Accepted" (scenario ID: 9315233)
+- Webhook URL: `https://hook.eu2.make.com/bjdc1oe65zcqw7k5fckx592fssqh5upv` (hook ID: 4164932)
+- Scenario: Gmail notification to Terri with full quote details + GHL Create Contact
+- GHL connection used: ID 14135168 (Location: Izi Travel)
+- Gmail connection used: ID 13437969 (jacques@jcemedia.com)
+
+**Critical finding — browser CORS kills Make.com JSON parsing:**
+
+| Approach | Result |
+|---|---|
+| `mode:'no-cors'` + `Content-Type: application/json` | Browser downgrades to `text/plain` → Make.com wraps entire body in `{{1.value}}` → all template variables empty |
+| `mode:'cors'` + `Content-Type: application/json` | Works in Chrome extension tests but unpredictable from real quote pages (CDN caching, browser behaviour) |
+| **Server-side proxy (FINAL FIX)** | **Browser posts to `/.netlify/functions/quote-accepted` (same-origin, no CORS) → function forwards to Make.com via Node `https` with proper `application/json` → Make.com always receives structured JSON** |
+
+**New file: `netlify/functions/quote-accepted.js`**
+- Receives the form submission from the quote page (same-origin POST)
+- Forwards to Make.com webhook using Node `https` module (no CORS restrictions server-side)
+- Make.com always receives `Content-Type: application/json` → fields available as `{{1.quoteRef}}`, `{{1.email}}` etc. directly
+- `WEBHOOK_URL` in `template.js` is now `/.netlify/functions/quote-accepted` (NOT the Make.com URL directly)
+
+**Make.com data structure:** ID 586843 ("IziTravel Quote Accepted Payload") — defines all webhook fields
+**Make.com hook udt:** Set to 586843 on hook 4164932 — tells Make.com the schema of incoming data
+
+**GHL "Prevent Duplicate Contacts" issue:**
+- GHL location has this setting ON — rejects `createAContact` API calls when contact already exists
+- Fix: Turn OFF in GHL → Settings → Business Profile, OR the Make.com scenario just emails Terri (GHL contact creation is optional)
+- GHL workflow "Quote Accepted Internal Notification" already built — triggers on tag "quote accepted" added to contact
+
+**Make.com API limitations discovered:**
+- `scenarios_create` → always 500 Internal Server Error (bug in Make.com MCP) — must create scenarios in UI
+- `scenarios_update` with `json:ParseJSON` module → marks scenario `isinvalid: true` (tags field also causes this)
+- `isinvalid: true` scenarios still execute but run a cached/corrupted blueprint — variables don't resolve
+- Solution: Build complex scenarios in Make.com UI, use API only for simple webhook + email + GHL modules without tags
 
 ### Session 5 — Admin improvements + productivity features
 - **Added:** Phone and email fields to the quote form (collected in `clientDetails`, stored in quoteData + gist record, shown in admin)
