@@ -394,7 +394,7 @@ body{font-family:'Inter',sans-serif;background:#fff;color:var(--gray-900);line-h
 <div class="intro">
   <div class="intro-inner">
     <div class="intro-text">
-      ${esc(greeting)}, please review the options below and click <strong>&ldquo;Select This Package&rdquo;</strong> on your preferred choice. We&rsquo;ll be in touch within 24 hours to confirm.
+      ${esc(greeting)}, please review the options below and click <strong>&ldquo;Select This Package&rdquo;</strong> on your preferred choice. Our travel agent will be in touch with you shortly to confirm.
     </div>
     <div class="validity-txt">Ref: <strong>${quoteRef}</strong> &middot; Valid ${esc(validity)} hours</div>
   </div>
@@ -505,7 +505,7 @@ ${exclHTML}
     } catch(e){}
     document.getElementById('modalBody').innerHTML =
       '<div class="msuccess"><div class="tick">🎉</div><h4>You’re all set, ' + name.split(' ')[0] + '!</h4>' +
-      '<p>We’ve received your selection and will be in touch within <strong>24 hours</strong> to confirm.<br><br>' +
+      ‘<p>We\’ve received your selection and our travel agent will be in touch with you <strong>shortly</strong> to confirm.<br><br>’ +
       'In the meantime, WhatsApp us on <strong>' + ED.agentPhone + '</strong>.</p></div>';
     document.body.style.overflow = '';
   }

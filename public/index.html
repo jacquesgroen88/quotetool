@@ -177,11 +177,48 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 </head>
 <body>
 
+<!-- ── What's New modal ── -->
+<div id="updates-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:20px;padding:36px;max-width:520px;width:calc(100% - 48px);box-shadow:0 8px 40px rgba(0,0,0,.18);max-height:80vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <h2 style="font-size:20px;font-weight:800;color:#111827;letter-spacing:-.02em">&#127381; What's New</h2>
+        <p style="font-size:13px;color:#6b7280;margin-top:3px">Recent updates to the Quote Generator</p>
+      </div>
+      <button onclick="document.getElementById('updates-modal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;line-height:1">&#10005;</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="border-left:3px solid #e63946;padding-left:16px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:4px">Latest</div>
+        <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:6px">&#8617; Undo AI changes</div>
+        <div style="font-size:13px;color:#6b7280;line-height:1.6">After any AI edit, an <strong>↩ Undo Last Change</strong> button appears below the chat input. Click it to revert — supports up to 10 steps back.</div>
+      </div>
+      <div style="border-left:3px solid #e63946;padding-left:16px">
+        <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:6px">&#128231; Quote acceptance email</div>
+        <div style="font-size:13px;color:#6b7280;line-height:1.6">When a client clicks <strong>Select This Package</strong> and submits their details, you automatically receive an email with the resort, price, dates, and the client's contact info.</div>
+      </div>
+      <div style="border-left:3px solid #e63946;padding-left:16px">
+        <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:6px">&#128179; Price markup tool</div>
+        <div style="font-size:13px;color:#6b7280;line-height:1.6">Enter a percentage in the <strong>Price Markup</strong> panel to apply a markup to all option prices at once. The quote auto-saves after applying.</div>
+      </div>
+      <div style="border-left:3px solid #e63946;padding-left:16px">
+        <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:6px">&#128241; WhatsApp send button</div>
+        <div style="font-size:13px;color:#6b7280;line-height:1.6">The <strong>Send via WhatsApp</strong> button appears in the link card once a quote is saved — opens a WhatsApp message with the client link pre-filled.</div>
+      </div>
+      <div style="border-left:3px solid #e63946;padding-left:16px">
+        <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:6px">&#128188; Admin dashboard improvements</div>
+        <div style="font-size:13px;color:#6b7280;line-height:1.6">Search, filter by date, sort by name or newest. Client phone/email stored and viewable via <strong>Details ▾</strong>. Export all quotes to CSV. Duplicate any quote with one click.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Header ── -->
 <header class="app-header">
   <div class="app-header-inner">
     <a class="app-logo" href="/"><img src="/assets/izilogo.jpg" alt="IziTravel"/></a>
     <div class="app-title">Quote Generator &nbsp;<span>Internal Tool</span></div>
+    <button onclick="document.getElementById('updates-modal').style.display='flex'" style="padding:8px 16px;background:var(--pink-light);color:var(--pink-dark);border:1.5px solid #fecaca;border-radius:999px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='var(--pink-light)'">&#127381; What's New</button>
   </div>
 </header>
 
