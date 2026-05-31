@@ -90,7 +90,7 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 /* ════════════════════════════════════════
    VIEW: EDITOR (two-panel)
 ════════════════════════════════════════ */
-.editor-layout{display:grid;grid-template-columns:1fr 380px;gap:24px;height:calc(100vh - 160px);align-items:start}
+.editor-layout{display:grid;grid-template-columns:1fr 380px;gap:24px;height:calc(100dvh - 160px);min-height:500px;align-items:start}
 
 /* Preview panel */
 .preview-panel{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);overflow:hidden;height:100%;display:flex;flex-direction:column;box-shadow:var(--shadow)}
@@ -100,7 +100,7 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 #preview-frame{width:100%;flex:1;border:none;display:block}
 
 /* Chat panel */
-.chat-panel{display:flex;flex-direction:column;gap:16px;height:100%;overflow:hidden}
+.chat-panel{display:flex;flex-direction:column;gap:16px;height:100%;overflow:hidden;min-height:0}
 
 /* Quote info card */
 .quote-info-card{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);padding:16px 18px;box-shadow:var(--shadow)}
@@ -143,7 +143,7 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 
 .chat-empty{font-size:13px;color:var(--gray-400);text-align:center;padding:24px 16px;line-height:1.7}
 
-.chat-input-wrap{padding:12px;border-top:1px solid var(--gray-100);display:flex;gap:8px;flex-shrink:0}
+.chat-input-wrap{padding:12px;border-top:1px solid var(--gray-100);display:flex;gap:8px;flex-shrink:0;position:sticky;bottom:0;background:#fff;z-index:1}
 #chat-input{flex:1;padding:10px 13px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13.5px;font-family:inherit;color:var(--gray-900);outline:none;transition:border-color .15s;resize:none}
 #chat-input:focus{border-color:var(--pink)}
 #chat-send{padding:10px 16px;background:var(--pink);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s;white-space:nowrap}
@@ -396,9 +396,12 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 
         <!-- AI Edit chat -->
         <div class="chat-card">
-          <div class="chat-header">
-            <h3>✏️ Edit Assistant</h3>
-            <p>Describe any change — the quote updates instantly.</p>
+          <div class="chat-header" style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <h3>✏️ Edit Assistant</h3>
+              <p>Describe any change — the quote updates instantly.</p>
+            </div>
+            <button id="undo-btn" title="Undo last AI change" style="display:none;padding:6px 12px;background:#fff;color:var(--gray-700);border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;white-space:nowrap" onmouseover="this.style.borderColor='var(--pink)';this.style.color='var(--pink)'" onmouseout="this.style.borderColor='var(--gray-200)';this.style.color='var(--gray-700)'">↩ Undo</button>
           </div>
 
           <!-- Quick chips -->

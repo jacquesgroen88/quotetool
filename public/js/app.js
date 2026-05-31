@@ -11,6 +11,7 @@ const App = (() => {
     isEditing:    false,        // True while edit AI call is in progress
     quoteUrl:     null,         // Shareable client link from save-quote
     editQuoteId:  null,         // UUID of the saved quote being edited (null = new quote)
+    quoteHistory: [],           // Stack of previous quoteData states for undo (max 10)
   };
 
   // ── DOM refs ───────────────────────────────────────────────────────────────
@@ -79,6 +80,28 @@ const App = (() => {
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // ── Undo history ──────────────────────────────────────────────────────────
+  function pushHistory(data) {
+    state.quoteHistory.push(JSON.parse(JSON.stringify(data))); // deep clone
+    if (state.quoteHistory.length > 10) state.quoteHistory.shift(); // keep last 10
+    updateUndoBtn();
+  }
+
+  function updateUndoBtn() {
+    const btn = $('undo-btn');
+    if (btn) btn.style.display = state.quoteHistory.length > 0 ? 'inline-block' : 'none';
+  }
+
+  function undoLastEdit() {
+    if (state.quoteHistory.length === 0) return;
+    const prev = state.quoteHistory.pop();
+    state.quoteData = prev;
+    updateUndoBtn();
+    refreshPreview();
+    if (state.editQuoteId) saveQuoteLink(state.quoteData, true);
+    addChatMsg('ai', '↩ Reverted to the previous version.');
   }
 
   // ── Price markup ──────────────────────────────────────────────────────────
@@ -324,6 +347,9 @@ const App = (() => {
     setChatInputState(true);
 
     try {
+      // Save current state to history before applying AI change (enables undo)
+      pushHistory(state.quoteData);
+
       const res = await fetch('/.netlify/functions/edit', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -482,6 +508,10 @@ const App = (() => {
       }
     });
 
+    // Undo button
+    const undoBtn = $('undo-btn');
+    if (undoBtn) undoBtn.addEventListener('click', undoLastEdit);
+
     // Markup apply button
     const markupBtn = $('markup-apply-btn');
     if (markupBtn) markupBtn.addEventListener('click', applyMarkup);
@@ -498,6 +528,8 @@ const App = (() => {
       state.quoteUrl = null;
       state.editQuoteId = null;
       state.chatMessages = [];
+      state.quoteHistory = [];
+      updateUndoBtn();
       if (state.currentBlobUrl) URL.revokeObjectURL(state.currentBlobUrl);
       state.currentBlobUrl = null;
       // Reset drop zone
