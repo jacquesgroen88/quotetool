@@ -3,10 +3,10 @@
 // Runs client-side; logo is passed as a base64 data URL.
 
 const WEBHOOK_URL  = '/.netlify/functions/quote-accepted';
-const AGENT_PHONE  = '+27 82 967 2060';
+const AGENT_PHONE  = '+27 60 806 6589';
 const AGENT_EMAIL  = 'terrib@izitravel.co.za';
 const AGENT_OFFICE = '+27 16 023 0214';
-const AGENT_WA     = '27829672060';
+const AGENT_WA     = '27608066589';
 
 const DESTINATION_IMAGES = {
   zanzibar:   'https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=2000&auto=format&fit=crop',

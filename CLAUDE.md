@@ -8,7 +8,7 @@
 
 ## What This Tool Does
 
-IziTravel is a South African travel agency run by **Terri** (contact: terrib@izitravel.co.za, +27 82 967 2060, office +27 16 023 0214). Terri receives raw package documents from multiple suppliers (AFS, Afristay, resort-direct, wholesalers — each in a completely different format). She previously had to manually reformat these into branded IziTravel client-facing Word quotes.
+IziTravel is a South African travel agency run by **Terri** (contact: terrib@izitravel.co.za, +27 60 806 6589, office +27 16 023 0214). Terri receives raw package documents from multiple suppliers (AFS, Afristay, resort-direct, wholesalers — each in a completely different format). She previously had to manually reformat these into branded IziTravel client-facing Word quotes.
 
 This tool automates the entire process:
 
@@ -195,10 +195,10 @@ Contains `buildQuoteHTML(data, logoBase64)` — builds the entire client-facing 
 **Hardcoded agent details (Terri):**
 ```javascript
 const WEBHOOK_URL  = 'https://hook.eu2.make.com/5it7lfymupsatg8sht6wg536bj35v6jy';
-const AGENT_PHONE  = '+27 82 967 2060';
+const AGENT_PHONE  = '+27 60 806 6589';
 const AGENT_EMAIL  = 'terrib@izitravel.co.za';
 const AGENT_OFFICE = '+27 16 023 0214';
-const AGENT_WA     = '27829672060';  // WhatsApp number (no +)
+const AGENT_WA     = '27608066589';  // WhatsApp number (no +)
 ```
 
 **Destination hero images:** Unsplash CDN map in `getHeroImage(destination)` — covers Zanzibar, Mauritius, Maldives, Seychelles, Bali, Dubai, Kenya, Cape Town, Egypt, Thailand, Morocco + fallback.
