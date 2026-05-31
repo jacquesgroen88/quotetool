@@ -91,7 +91,7 @@ const App = (() => {
 
   function updateUndoBtn() {
     const btn = $('undo-btn');
-    if (btn) btn.style.display = state.quoteHistory.length > 0 ? 'inline-block' : 'none';
+    if (btn) btn.style.display = state.quoteHistory.length > 0 ? 'block' : 'none';
   }
 
   function undoLastEdit() {

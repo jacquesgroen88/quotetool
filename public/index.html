@@ -100,7 +100,7 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 #preview-frame{width:100%;flex:1;border:none;display:block}
 
 /* Chat panel */
-.chat-panel{display:flex;flex-direction:column;gap:16px;height:100%;overflow:hidden;min-height:0}
+.chat-panel{display:flex;flex-direction:column;gap:16px;height:100%;overflow-y:auto;min-height:0}
 
 /* Quote info card */
 .quote-info-card{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);padding:16px 18px;box-shadow:var(--shadow)}
@@ -123,7 +123,7 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 .qlink-hint{font-size:11.5px;color:var(--gray-400);margin-top:8px;line-height:1.5}
 
 /* AI Edit chat */
-.chat-card{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);display:flex;flex-direction:column;flex:1;overflow:hidden;box-shadow:var(--shadow)}
+.chat-card{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);display:flex;flex-direction:column;flex:1;min-height:320px;box-shadow:var(--shadow)}
 .chat-header{padding:14px 18px;border-bottom:1px solid var(--gray-100);background:var(--gray-50);flex-shrink:0}
 .chat-header h3{font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:2px}
 .chat-header p{font-size:12px;color:var(--gray-400)}
@@ -143,7 +143,7 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 
 .chat-empty{font-size:13px;color:var(--gray-400);text-align:center;padding:24px 16px;line-height:1.7}
 
-.chat-input-wrap{padding:12px;border-top:1px solid var(--gray-100);display:flex;gap:8px;flex-shrink:0;position:sticky;bottom:0;background:#fff;z-index:1}
+.chat-input-wrap{padding:12px;border-top:1px solid var(--gray-100);display:flex;flex-direction:column;gap:8px;flex-shrink:0;background:#fff}
 #chat-input{flex:1;padding:10px 13px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13.5px;font-family:inherit;color:var(--gray-900);outline:none;transition:border-color .15s;resize:none}
 #chat-input:focus{border-color:var(--pink)}
 #chat-send{padding:10px 16px;background:var(--pink);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s;white-space:nowrap}
