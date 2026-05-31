@@ -424,12 +424,12 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
           </div>
 
           <!-- Input -->
-          <div class="chat-input-wrap">
-            <input type="text" id="chat-input" placeholder="e.g. Change client to Mr &amp; Mrs Ferreira…"/>
-            <button id="chat-send">Apply Change</button>
-          </div>
-          <div style="padding:0 12px 10px;display:flex;justify-content:flex-end">
-            <button id="undo-btn" style="display:none;padding:6px 14px;background:#fff;color:var(--gray-500);border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--pink)';this.style.color='var(--pink)'" onmouseout="this.style.borderColor='var(--gray-200)';this.style.color='var(--gray-500)'">↩ Undo Last Change</button>
+          <div class="chat-input-wrap" style="flex-direction:column;gap:8px">
+            <div style="display:flex;gap:8px;width:100%">
+              <input type="text" id="chat-input" placeholder="e.g. Change client to Mr &amp; Mrs Ferreira…" style="flex:1"/>
+              <button id="chat-send">Apply Change</button>
+            </div>
+            <button id="undo-btn" style="display:none;width:100%;padding:8px;background:var(--gray-50);color:var(--gray-500);border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;text-align:center" onmouseover="this.style.borderColor='var(--pink)';this.style.color='var(--pink)';this.style.background='var(--pink-light)'" onmouseout="this.style.borderColor='var(--gray-200)';this.style.color='var(--gray-500)';this.style.background='var(--gray-50)'">↩ Undo Last Change</button>
           </div>
         </div>
 
