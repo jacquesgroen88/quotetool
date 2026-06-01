@@ -155,7 +155,7 @@ function buildQuoteHTML(data, logoBase64) {
     ${addedHTML}
     ${optFlightHTML}
     ${descHTML}
-    <button class="select-btn" data-opt="${optDataAttr}" onclick="iziSelectPackage(this)">Select This Package &#8594;</button>
+    <button class="select-btn" data-opt="${optDataAttr}">Select This Package &#8594;</button>
   </div>
 </div>`;
   }).join('');
@@ -436,9 +436,9 @@ ${exclHTML}
   </div>
 </footer>
 
-<div class="modal-bg" id="modalBg" onclick="if(event.target===this)iziCloseModal()" style="display:none">
+<div class="modal-bg" id="modalBg" style="display:none">
   <div class="modal">
-    <button class="modal-x" id="modalClose" onclick="iziCloseModal()">&#10005;</button>
+    <button class="modal-x" id="modalClose">&#10005;</button>
     <div id="modalBody">
       <h3>Confirm Your Selection</h3>
       <p class="chosen-lbl" id="chosenLbl"></p>
@@ -447,72 +447,14 @@ ${exclHTML}
         <div class="mfield"><label>Email Address</label><input type="email" id="mEmail" placeholder="your@email.com"/></div>
         <div class="mfield"><label>WhatsApp / Phone</label><input type="tel" id="mPhone" placeholder="+27 XX XXX XXXX"/></div>
         <div class="mfield"><label>Questions or special requests? <span style="font-weight:400;color:#9ca3af">(optional)</span></label><textarea id="mMessage" placeholder="e.g. anniversary trip, sea-view room..."></textarea></div>
-        <button class="msubmit" id="mSubmit" onclick="iziSubmit()">Confirm My Selection &#10003;</button>
+        <button class="msubmit" id="mSubmit">Confirm My Selection &#10003;</button>
       </div>
     </div>
   </div>
 </div>
 
-<script>
-window.onerror = function(msg, src, line, col) {
-  var d = document.createElement(‘div’);
-  d.style.cssText = ‘position:fixed;top:0;left:0;right:0;background:#c00;color:#fff;padding:12px 16px;font:13px monospace;z-index:9999;white-space:pre-wrap’;
-  d.textContent = ‘JS ERROR (line ‘ + line + ‘, col ‘ + col + ‘): ‘ + msg;
-  document.body.appendChild(d);
-};
-</script>
 <script id="embedData" type="application/json">${embedData}</script>
-<script>
-var _ED = JSON.parse(document.getElementById(‘embedData’).textContent);
-var _selOpt = null;
-var _origModalBody = document.getElementById(‘modalBody’).innerHTML;
-
-function iziSelectPackage(btn) {
-  _selOpt = JSON.parse(btn.getAttribute(‘data-opt’));
-  var lbl = _selOpt.resortName + (_selOpt.roomType ? ‘ · ‘ + _selOpt.roomType : ‘’);
-  document.getElementById(‘chosenLbl’).innerHTML = ‘You selected: <strong>’ + lbl + ‘</strong>’;
-  document.getElementById(‘mName’).value = ‘’;
-  document.getElementById(‘modalBg’).style.display = ‘flex’;
-  document.body.style.overflow = ‘hidden’;
-}
-
-function iziCloseModal() {
-  document.getElementById(‘modalBg’).style.display = ‘none’;
-  document.body.style.overflow = ‘’;
-  document.getElementById(‘modalBody’).innerHTML = _origModalBody;
-  _selOpt = null;
-}
-
-async function iziSubmit() {
-  var name  = document.getElementById(‘mName’).value.trim();
-  var email = document.getElementById(‘mEmail’).value.trim();
-  var phone = document.getElementById(‘mPhone’).value.trim();
-  var msg   = document.getElementById(‘mMessage’) ? document.getElementById(‘mMessage’).value.trim() : ‘’;
-  if (!name || !email) { alert(‘Please enter your name and email address.’); return; }
-  var btn = document.getElementById(‘mSubmit’);
-  btn.disabled = true; btn.textContent = ‘Sending...’;
-  try {
-    await fetch(_ED.webhookUrl, {
-      method: ‘POST’,
-      headers: { ‘Content-Type’: ‘application/json’ },
-      body: JSON.stringify({
-        formType: ‘quote_accepted’, quoteRef: _ED.quoteRef,
-        clientName: _ED.clientName, destination: _ED.dest,
-        dates: _ED.dates, adults: _ED.adults,
-        selectedOption: _selOpt,
-        submittedName: name, email: email, phone: phone, message: msg,
-      }),
-    });
-  } catch(e) {}
-  var firstName = name.split(‘ ‘)[0];
-  document.getElementById(‘modalBody’).innerHTML =
-    "<div class=’msuccess’><div class=’tick’>&#127881;</div>" +
-    "<h4>You’re all set, " + firstName + "!</h4>" +
-    "<p>We’ve received your selection and our travel agent will be in touch with you <strong>shortly</strong> to confirm.<br><br>" +
-    "In the meantime, WhatsApp us on <strong>" + _ED.agentPhone + "</strong>.</p></div>";
-  document.body.style.overflow = ‘’;
-}
-</script>
+<script src="/js/quote-modal.js" defer></script>
 </body>
 </html>`;
 }
