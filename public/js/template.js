@@ -418,8 +418,7 @@ ${exclHTML}
     <h2>Ready to confirm your holiday?</h2>
     <p>Select a package above or reach out to us directly.</p>
     <div class="cta-btns">
-      <a href="https://wa.me/${AGENT_WA}?text=Hi%2C+I'd+like+to+confirm+my+quote+${encodeURIComponent(quoteRef)}" class="cta-btn cta-p" target="_blank">&#128172; WhatsApp Us</a>
-      <a href="tel:${AGENT_PHONE.replace(/\s/g, '')}" class="cta-btn cta-s">&#128222; Call Us</a>
+      <a href="tel:${AGENT_PHONE.replace(/\s/g, '')}" class="cta-btn cta-p">&#128222; Call Us</a>
       <a href="mailto:${AGENT_EMAIL}?subject=Quote+${encodeURIComponent(quoteRef)}" class="cta-btn cta-s">&#9993; Email Us</a>
     </div>
   </div>
