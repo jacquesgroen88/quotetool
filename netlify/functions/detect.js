@@ -1,5 +1,6 @@
 const pdfParse = require('pdf-parse');
 const mammoth  = require('mammoth');
+const https    = require('https');
 const fs       = require('fs');
 const path     = require('path');
 
@@ -13,8 +14,6 @@ try {
   }
 } catch {}
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
 async function extractText(buffer, filename) {
   const name = filename.toLowerCase();
   if (name.endsWith('.pdf')) {
@@ -25,7 +24,37 @@ async function extractText(buffer, filename) {
     const result = await mammoth.extractRawText({ buffer });
     return result.value;
   }
-  throw new Error('Unsupported file type. Please upload a PDF or DOCX.');
+  throw new Error('Unsupported file type.');
+}
+
+function callOpenRouter(apiKey, payload) {
+  return new Promise((resolve, reject) => {
+    const bodyBuf = Buffer.from(JSON.stringify(payload), 'utf8');
+    const req = https.request(
+      {
+        hostname: 'openrouter.ai',
+        path:     '/api/v1/chat/completions',
+        method:   'POST',
+        headers: {
+          'Authorization':  `Bearer ${apiKey}`,
+          'Content-Type':   'application/json',
+          'Content-Length': bodyBuf.length,
+          'HTTP-Referer':   'https://izitravel.co.za',
+          'X-Title':        'IziTravel Quote Generator',
+          'User-Agent':     'IziTravel-Quote-Tool/1.0',
+        },
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => resolve({ status: res.statusCode, body: data }));
+      }
+    );
+    req.on('error', (err) => reject(err));
+    req.setTimeout(10000, () => { req.destroy(); reject(new Error('OpenRouter timeout')); });
+    req.write(bodyBuf);
+    req.end();
+  });
 }
 
 exports.handler = async (event) => {
@@ -40,32 +69,24 @@ exports.handler = async (event) => {
 
   try {
     const { fileData, filename } = JSON.parse(event.body);
-    const base64 = fileData.includes(',') ? fileData.split(',')[1] : fileData;
-    const buffer = Buffer.from(base64, 'base64');
+    const base64  = fileData.includes(',') ? fileData.split(',')[1] : fileData;
+    const buffer  = Buffer.from(base64, 'base64');
     const rawText = await extractText(buffer, filename);
+    const apiKey  = process.env.OPENROUTER_API_KEY;
 
-    const apiRes = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://izitravel.co.za',
-        'X-Title': 'IziTravel Quote Generator',
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-haiku-4.5',
-        messages: [{
-          role: 'user',
-          content: `From this travel supplier document, extract ONLY as JSON (no markdown):
+    const { body } = await callOpenRouter(apiKey, {
+      model:      'anthropic/claude-haiku-4.5',
+      messages: [{
+        role:    'user',
+        content: `From this travel supplier document, extract ONLY as JSON (no markdown):
 {"clientName":"","destination":"","dates":"","adults":"","occasion":""}
 Leave empty string if not found. Look for labels like "Pax:", "Attention:", "Quote for:", "Client:".
 Text:\n${rawText.slice(0, 3000)}`,
-        }],
-        max_tokens: 256,
-      }),
+      }],
+      max_tokens: 256,
     });
 
-    const aiData  = await apiRes.json();
+    const aiData  = JSON.parse(body);
     const content = aiData.choices?.[0]?.message?.content || '{}';
     const cleaned = content.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
 

@@ -1,5 +1,6 @@
 const pdfParse = require('pdf-parse');
 const mammoth  = require('mammoth');
+const https    = require('https');
 const fs       = require('fs');
 const path     = require('path');
 
@@ -14,8 +15,6 @@ try {
   }
 } catch {}
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
 async function extractText(buffer, filename) {
   const name = filename.toLowerCase();
   if (name.endsWith('.pdf')) {
@@ -27,6 +26,45 @@ async function extractText(buffer, filename) {
     return result.value;
   }
   throw new Error('Unsupported file type. Please upload a PDF or DOCX.');
+}
+
+// Use Node https module — avoids Node 18 native fetch (undici) connection
+// reliability issues from some Netlify Lambda IPs (same fix as _store.js)
+function callOpenRouter(apiKey, payload) {
+  return new Promise((resolve, reject) => {
+    const bodyBuf = Buffer.from(JSON.stringify(payload), 'utf8');
+    const req = https.request(
+      {
+        hostname: 'openrouter.ai',
+        path:     '/api/v1/chat/completions',
+        method:   'POST',
+        headers: {
+          'Authorization':  `Bearer ${apiKey}`,
+          'Content-Type':   'application/json',
+          'Content-Length': bodyBuf.length,
+          'HTTP-Referer':   'https://izitravel.co.za',
+          'X-Title':        'IziTravel Quote Generator',
+          'User-Agent':     'IziTravel-Quote-Tool/1.0',
+        },
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => resolve({ status: res.statusCode, body: data }));
+      }
+    );
+
+    req.on('error', (err) => reject(new Error(`OpenRouter connection error: ${err.message}`)));
+
+    // 20-second socket timeout — kills hung connections at TCP level
+    req.setTimeout(20000, () => {
+      req.destroy();
+      reject(new Error('The AI is taking longer than usual. Please try again — it usually works on the second attempt.'));
+    });
+
+    req.write(bodyBuf);
+    req.end();
+  });
 }
 
 exports.handler = async (event) => {
@@ -101,37 +139,13 @@ ${rawText}`;
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY not set in environment.');
 
-    // Abort at 22 s so we return a clean error before Netlify's 26 s gateway timeout
-    const controller = new AbortController();
-    const abortTimer = setTimeout(() => controller.abort(), 22000);
+    const { body } = await callOpenRouter(apiKey, {
+      model:      'anthropic/claude-sonnet-4.5',
+      messages:   [{ role: 'user', content: prompt }],
+      max_tokens: 2000,
+    });
 
-    let apiRes;
-    try {
-      apiRes = await fetch(OPENROUTER_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://izitravel.co.za',
-          'X-Title': 'IziTravel Quote Generator',
-        },
-        body: JSON.stringify({
-          model: 'anthropic/claude-sonnet-4.5',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 2000,
-        }),
-        signal: controller.signal,
-      });
-    } catch (fetchErr) {
-      if (fetchErr.name === 'AbortError') {
-        throw new Error('The AI is taking longer than usual. Please try again — it usually works on the second attempt.');
-      }
-      throw fetchErr;
-    } finally {
-      clearTimeout(abortTimer);
-    }
-
-    const aiData  = await apiRes.json();
+    const aiData  = JSON.parse(body);
     if (aiData.error) throw new Error(`OpenRouter error: ${aiData.error.message || JSON.stringify(aiData.error)}`);
     const content = aiData.choices?.[0]?.message?.content;
     if (!content) throw new Error(`No content in AI response. Raw: ${JSON.stringify(aiData).slice(0, 300)}`);

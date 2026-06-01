@@ -1,5 +1,6 @@
-const fs   = require('fs');
-const path = require('path');
+const https = require('https');
+const fs    = require('fs');
+const path  = require('path');
 
 try {
   const envPath = path.resolve(__dirname, '../../.env');
@@ -11,7 +12,35 @@ try {
   }
 } catch {}
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+function callOpenRouter(apiKey, payload) {
+  return new Promise((resolve, reject) => {
+    const bodyBuf = Buffer.from(JSON.stringify(payload), 'utf8');
+    const req = https.request(
+      {
+        hostname: 'openrouter.ai',
+        path:     '/api/v1/chat/completions',
+        method:   'POST',
+        headers: {
+          'Authorization':  `Bearer ${apiKey}`,
+          'Content-Type':   'application/json',
+          'Content-Length': bodyBuf.length,
+          'HTTP-Referer':   'https://izitravel.co.za',
+          'X-Title':        'IziTravel Quote Generator',
+          'User-Agent':     'IziTravel-Quote-Tool/1.0',
+        },
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => resolve({ status: res.statusCode, body: data }));
+      }
+    );
+    req.on('error', (err) => reject(err));
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Edit request timed out. Please try again.')); });
+    req.write(bodyBuf);
+    req.end();
+  });
+}
 
 exports.handler = async (event) => {
   const cors = {
@@ -25,6 +54,7 @@ exports.handler = async (event) => {
 
   try {
     const { quoteData, message } = JSON.parse(event.body);
+    const apiKey = process.env.OPENROUTER_API_KEY;
 
     const systemPrompt = `You are an AI assistant helping a travel agent modify a client quote.
 You receive the current quote data as JSON and a natural language instruction.
@@ -41,25 +71,16 @@ ${JSON.stringify(quoteData, null, 2)}
 
 Agent instruction: "${message}"`;
 
-    const apiRes = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://izitravel.co.za',
-        'X-Title': 'IziTravel Quote Generator',
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-haiku-4.5',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user',   content: userPrompt },
-        ],
-        max_tokens: 4096,
-      }),
+    const { body } = await callOpenRouter(apiKey, {
+      model:    'anthropic/claude-haiku-4.5',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt },
+      ],
+      max_tokens: 4096,
     });
 
-    const aiData  = await apiRes.json();
+    const aiData  = JSON.parse(body);
     const content = aiData.choices?.[0]?.message?.content;
     if (!content) throw new Error('No response from AI.');
 
