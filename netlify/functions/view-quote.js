@@ -2,9 +2,10 @@ const store  = require('./_store');
 const path   = require('path');
 
 // Require template.js for server-side rendering.
-// On Netlify Lambda, __dirname = /var/task (function root).
-// included_files in netlify.toml bundles public/js/template.js at /var/task/public/js/template.js
-const { buildQuoteHTML } = require(path.resolve(__dirname, 'public/js/template.js'));
+// With included_files, __dirname = /var/task/netlify/functions
+// included_files places public/js/template.js at /var/task/public/js/template.js
+// So ../../public/js/template.js resolves correctly
+const { buildQuoteHTML } = require(path.resolve(__dirname, '../../public/js/template.js'));
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') {
