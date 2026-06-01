@@ -453,6 +453,14 @@ ${exclHTML}
   </div>
 </div>
 
+<script>
+window.onerror = function(msg, src, line, col) {
+  var d = document.createElement(‘div’);
+  d.style.cssText = ‘position:fixed;top:0;left:0;right:0;background:#c00;color:#fff;padding:12px 16px;font:13px monospace;z-index:9999;white-space:pre-wrap’;
+  d.textContent = ‘JS ERROR (line ‘ + line + ‘, col ‘ + col + ‘): ‘ + msg;
+  document.body.appendChild(d);
+};
+</script>
 <script id="embedData" type="application/json">${embedData}</script>
 <script>
 var _ED = JSON.parse(document.getElementById(‘embedData’).textContent);
