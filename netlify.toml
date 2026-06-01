@@ -8,6 +8,9 @@
 [functions]
   directory = "netlify/functions"
 
+[functions."view-quote"]
+  included_files = ["public/js/template.js"]
+
 [dev]
   framework = "#static"
   port = 3002

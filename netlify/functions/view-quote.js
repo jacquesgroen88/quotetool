@@ -1,9 +1,10 @@
 const store  = require('./_store');
 const path   = require('path');
 
-// Require template.js from the static folder — runs server-side for rendering
-// This eliminates the fragile document.write pattern entirely
-const { buildQuoteHTML } = require(path.resolve(__dirname, '../../public/js/template.js'));
+// Require template.js for server-side rendering.
+// On Netlify Lambda, __dirname = /var/task (function root).
+// included_files in netlify.toml bundles public/js/template.js at /var/task/public/js/template.js
+const { buildQuoteHTML } = require(path.resolve(__dirname, 'public/js/template.js'));
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') {
