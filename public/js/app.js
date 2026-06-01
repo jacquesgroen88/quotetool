@@ -147,7 +147,8 @@ const App = (() => {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ fileData, filename: file.name }),
       });
-      const data = await res.json();
+      let data = {};
+      try { data = await res.json(); } catch { data = {}; }
       // Fill form fields only if the field is still empty
       if (data.clientName  && !$('f-clientName').value)  $('f-clientName').value  = data.clientName;
       if (data.destination && !$('f-destination').value) $('f-destination').value = data.destination;
@@ -193,7 +194,8 @@ const App = (() => {
         body:    JSON.stringify({ fileData, filename: state.file.name, clientDetails }),
       });
 
-      const json = await res.json();
+      let json = {};
+      try { json = await res.json(); } catch { throw new Error(`Server error ${res.status} — the request may have timed out. Please try again.`); }
       if (!res.ok || json.error) throw new Error(json.error || `Server error: ${res.status}`);
 
       {
@@ -255,7 +257,8 @@ const App = (() => {
     setStatus(asNew ? 'Duplicating quote…' : 'Loading saved quote…');
     try {
       const res  = await fetch(`/.netlify/functions/load-quote?id=${encodeURIComponent(quoteId)}`);
-      const data = await res.json();
+      let data = {};
+      try { data = await res.json(); } catch { throw new Error('Could not load quote — server error. Please try again.'); }
       if (!res.ok || data.error) throw new Error(data.error || 'Quote not found');
 
       state.quoteData    = data.quoteData;
@@ -355,7 +358,8 @@ const App = (() => {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ quoteData: state.quoteData, message }),
       });
-      const result = await res.json();
+      let result = {};
+      try { result = await res.json(); } catch { throw new Error('Edit request timed out. Please try again.'); }
       if (result.error) throw new Error(result.error);
       state.quoteData = result.quoteData;
       addChatMsg('ai', result.changes || 'Done — quote updated.');
