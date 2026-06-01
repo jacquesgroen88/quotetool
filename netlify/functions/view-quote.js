@@ -28,6 +28,8 @@ exports.handler = async (event) => {
     // Logo is NOT stored in the gist — always serve from the static site.
     const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://izitravelquotes.netlify.app';
     const logoUrl = `${siteUrl}/assets/izilogo.jpg`;
+    // Cache-bust template.js using deploy commit ref so browsers always get latest version
+    const cacheBust = process.env.COMMIT_REF ? process.env.COMMIT_REF.slice(0, 8) : Date.now();
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -38,7 +40,7 @@ exports.handler = async (event) => {
 </head>
 <body>
 <script id="quotePayload" type="application/json">${JSON.stringify({ quoteData: record.quoteData, logoBase64: logoUrl })}</script>
-<script src="${siteUrl}/js/template.js"></script>
+<script src="${siteUrl}/js/template.js?v=${cacheBust}"></script>
 <script>
 (function(){
   var payload = JSON.parse(document.getElementById('quotePayload').textContent);
