@@ -101,20 +101,35 @@ ${rawText}`;
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY not set in environment.');
 
-    const apiRes = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://izitravel.co.za',
-        'X-Title': 'IziTravel Quote Generator',
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-sonnet-4.5',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 4096,
-      }),
-    });
+    // Abort at 22 s so we return a clean error before Netlify's 26 s gateway timeout
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), 22000);
+
+    let apiRes;
+    try {
+      apiRes = await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://izitravel.co.za',
+          'X-Title': 'IziTravel Quote Generator',
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-sonnet-4.5',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 2000,
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      if (fetchErr.name === 'AbortError') {
+        throw new Error('The AI is taking longer than usual. Please try again — it usually works on the second attempt.');
+      }
+      throw fetchErr;
+    } finally {
+      clearTimeout(abortTimer);
+    }
 
     const aiData  = await apiRes.json();
     if (aiData.error) throw new Error(`OpenRouter error: ${aiData.error.message || JSON.stringify(aiData.error)}`);
