@@ -1,11 +1,4 @@
-const store  = require('./_store');
-const path   = require('path');
-
-// Require template.js for server-side rendering.
-// With included_files, __dirname = /var/task/netlify/functions
-// included_files places public/js/template.js at /var/task/public/js/template.js
-// So ../../public/js/template.js resolves correctly
-const { buildQuoteHTML } = require(path.resolve(__dirname, '../../public/js/template.js'));
+const store = require('./_store');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') {
@@ -32,12 +25,33 @@ exports.handler = async (event) => {
       };
     }
 
-    // Logo served from static site — always a URL, never base64
-    const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://izitravelquotes.netlify.app';
-    const logoUrl = `${siteUrl}/assets/izilogo.jpg`;
+    const siteUrl   = process.env.URL || process.env.DEPLOY_URL || 'https://izitravelquotes.netlify.app';
+    const logoUrl   = `${siteUrl}/assets/izilogo.jpg`;
+    // Cache-bust using deploy commit ref so browsers always get latest template.js
+    const cacheBust = process.env.COMMIT_REF ? process.env.COMMIT_REF.slice(0, 8) : Date.now();
 
-    // Render HTML directly server-side — no document.write, no client-side template loading
-    const html = buildQuoteHTML(record.quoteData, logoUrl);
+    // Serve a thin HTML shell that loads template.js and rewrites the page.
+    // quote-modal.js (external static file) is loaded by the generated HTML —
+    // no inline JS in the generated page so no template-literal escaping issues.
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>IziTravel Quote — ${esc(record.clientName)} — ${esc(record.destination)}</title>
+</head>
+<body>
+<script id="quotePayload" type="application/json">${JSON.stringify({ quoteData: record.quoteData, logoBase64: logoUrl })}</script>
+<script src="${siteUrl}/js/template.js?v=${cacheBust}"></script>
+<script>
+(function(){
+  var p = JSON.parse(document.getElementById('quotePayload').textContent);
+  var h = buildQuoteHTML(p.quoteData, p.logoBase64);
+  document.open(); document.write(h); document.close();
+})();
+</script>
+</body>
+</html>`;
 
     return {
       statusCode: 200,
