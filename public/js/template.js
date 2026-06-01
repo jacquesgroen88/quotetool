@@ -482,7 +482,7 @@ async function iziSubmit() {
   var msg   = document.getElementById(‘mMessage’) ? document.getElementById(‘mMessage’).value.trim() : ‘’;
   if (!name || !email) { alert(‘Please enter your name and email address.’); return; }
   var btn = document.getElementById(‘mSubmit’);
-  btn.disabled = true; btn.textContent = ‘Sending…’;
+  btn.disabled = true; btn.textContent = ‘Sending...’;
   try {
     await fetch(_ED.webhookUrl, {
       method: ‘POST’,
@@ -496,11 +496,12 @@ async function iziSubmit() {
       }),
     });
   } catch(e) {}
+  var firstName = name.split(‘ ‘)[0];
   document.getElementById(‘modalBody’).innerHTML =
-    ‘<div class="msuccess"><div class="tick">🎉</div>’ +
-    ‘<h4>You\\’re all set, ‘ + name.split(‘ ‘)[0] + ‘!</h4>’ +
-    ‘<p>We\\’ve received your selection and our travel agent will be in touch with you <strong>shortly</strong> to confirm.<br><br>’ +
-    ‘In the meantime, WhatsApp us on <strong>’ + _ED.agentPhone + ‘</strong>.</p></div>’;
+    "<div class=’msuccess’><div class=’tick’>&#127881;</div>" +
+    "<h4>You’re all set, " + firstName + "!</h4>" +
+    "<p>We’ve received your selection and our travel agent will be in touch with you <strong>shortly</strong> to confirm.<br><br>" +
+    "In the meantime, WhatsApp us on <strong>" + _ED.agentPhone + "</strong>.</p></div>";
   document.body.style.overflow = ‘’;
 }
 </script>
