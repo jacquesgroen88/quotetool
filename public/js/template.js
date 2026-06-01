@@ -516,3 +516,6 @@ ${exclHTML}
 </body>
 </html>`;
 }
+
+// CommonJS export — allows view-quote.js to require this file and render server-side
+if (typeof module !== 'undefined') module.exports = { buildQuoteHTML, buildFilename };

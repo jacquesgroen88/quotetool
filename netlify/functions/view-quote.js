@@ -1,4 +1,9 @@
-const store = require('./_store');
+const store  = require('./_store');
+const path   = require('path');
+
+// Require template.js from the static folder — runs server-side for rendering
+// This eliminates the fragile document.write pattern entirely
+const { buildQuoteHTML } = require(path.resolve(__dirname, '../../public/js/template.js'));
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') {
@@ -25,31 +30,12 @@ exports.handler = async (event) => {
       };
     }
 
-    // Logo is NOT stored in the gist — always serve from the static site.
+    // Logo served from static site — always a URL, never base64
     const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://izitravelquotes.netlify.app';
     const logoUrl = `${siteUrl}/assets/izilogo.jpg`;
-    // Cache-bust template.js using deploy commit ref so browsers always get latest version
-    const cacheBust = process.env.COMMIT_REF ? process.env.COMMIT_REF.slice(0, 8) : Date.now();
 
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>IziTravel Quote — ${esc(record.clientName)} — ${esc(record.destination)}</title>
-</head>
-<body>
-<script id="quotePayload" type="application/json">${JSON.stringify({ quoteData: record.quoteData, logoBase64: logoUrl })}</script>
-<script src="${siteUrl}/js/template.js?v=${cacheBust}"></script>
-<script>
-(function(){
-  var payload = JSON.parse(document.getElementById('quotePayload').textContent);
-  var html = buildQuoteHTML(payload.quoteData, payload.logoBase64);
-  document.open(); document.write(html); document.close();
-})();
-</script>
-</body>
-</html>`;
+    // Render HTML directly server-side — no document.write, no client-side template loading
+    const html = buildQuoteHTML(record.quoteData, logoUrl);
 
     return {
       statusCode: 200,
