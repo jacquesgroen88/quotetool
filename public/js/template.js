@@ -504,7 +504,7 @@ ${exclHTML}
       });
     } catch(e){}
     document.getElementById('modalBody').innerHTML =
-      '<div class="msuccess"><div class="tick">🎉</div><h4>You’re all set, ' + name.split(' ')[0] + '!</h4>' +
+      ‘<div class="msuccess"><div class="tick">🎉</div><h4>You\’re all set, ‘ + name.split(‘ ‘)[0] + ‘!</h4>’ +
       ‘<p>We\’ve received your selection and our travel agent will be in touch with you <strong>shortly</strong> to confirm.<br><br>’ +
       'In the meantime, WhatsApp us on <strong>' + ED.agentPhone + '</strong>.</p></div>';
     document.body.style.overflow = '';
