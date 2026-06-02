@@ -127,13 +127,13 @@ Return this exact JSON (omit description field — it will be fetched separately
       "description": "",
       "inclusions": ["inclusion 1", "inclusion 2"],
       "addedValue": ["added value item if present"],
-      "flightDetails": "Option-specific flight details, or 'See flight details below' if shared, or \"\" if none.",
+      "flightDetails": "Set to 'See flight details below' if the same flights apply to all options (they usually do). Only put option-specific flights here if this option's flights genuinely differ from the others. \"\" if no flights.",
       "pricePerPerson": "R00,000.00",
       "totalPrice": "R00,000.00",
       "totalPax": "number of pax for this price if stated"
     }
   ],
-  "flightDetails": "Shared flights applying to ALL options. Empty string if each option has its own or if none.",
+  "flightDetails": "The FULL shared flight schedule (every leg: date, flight number, route, departure/arrival times, class). IMPORTANT: travel documents often repeat the SAME flights under each option — that means flights are SHARED, so put the complete schedule HERE and set each option's flightDetails to 'See flight details below'. Only leave this empty if options genuinely have different flights.",
   "exclusions": ["exclusion 1", "exclusion 2"]
 }
 
@@ -143,6 +143,7 @@ Rules (CRITICAL — follow exactly to keep the response fast and complete):
 - INCLUSIONS: List a MAXIMUM of 6 inclusions per option, each kept SHORT (under 8 words). Group/summarise similar items (e.g. "All-inclusive meals & beverages" instead of listing every drink). Do NOT copy long verbatim beverage, activity, or restaurant lists — just the key highlights.
 - addedValue: max 3 short items, or omit
 - If multiple room types for same resort, create separate options
+- FLIGHTS (important): If the same flight schedule repeats under each option, the flights are SHARED — extract the complete schedule into the top-level "flightDetails" field and set every option's flightDetails to "See flight details below". Never leave the top-level flightDetails empty when options say "See flight details below".
 - PRICING: Use the TOTAL price per person that INCLUDES airport tax/levies (the "Total" column, not the "excl VAT" base rate). totalPrice = the gross total for all pax. Prices may appear as "R 45,000", "R45000", "ZAR 45,000", in tables.
 - Do NOT mention supplier names (AFS, Afristay, Tourvest, Thompsons, Club Travel etc)
 - Strip booking reference codes and internal identifiers
@@ -223,6 +224,16 @@ ${rawText}`;
     })();
 
     let quoteData = await Promise.race([fullExtraction, hardTimeout]);
+
+    // Safety net: if options say "See flight details below" but the shared
+    // flightDetails section is empty, drop the dangling reference so the quote
+    // doesn't show a flight pointer with nothing to point at.
+    const sharedFlights = (quoteData.flightDetails || '').trim();
+    if (!sharedFlights && Array.isArray(quoteData.options)) {
+      quoteData.options.forEach(o => {
+        if (/see flight details below/i.test(o.flightDetails || '')) o.flightDetails = '';
+      });
+    }
 
     if (cd.clientName)  quoteData.clientName  = cd.clientName;
     if (cd.destination) quoteData.destination = cd.destination;
