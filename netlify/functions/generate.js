@@ -1,6 +1,5 @@
 const pdfParse = require('pdf-parse');
 const mammoth  = require('mammoth');
-const https    = require('https');
 const fs       = require('fs');
 const path     = require('path');
 
@@ -15,22 +14,7 @@ try {
   }
 } catch {}
 
-// Attempt to recover a truncated JSON string by closing open structures
-function repairJSON(str) {
-  // Try simple suffixes first
-  for (const suffix of [']}', '}]}', '\n]}', '\n}]}', '""]}', '"]}']) {
-    try { return JSON.parse(str + suffix); } catch {}
-  }
-  // Find last complete option object (ends with },  or },\n) and close from there
-  const lastObjEnd = str.lastIndexOf('},');
-  if (lastObjEnd > 0) {
-    const truncated = str.slice(0, lastObjEnd + 1);
-    for (const suffix of [']}', '}]}', '\n]}', '\n}]}']) {
-      try { return JSON.parse(truncated + suffix); } catch {}
-    }
-  }
-  return null;
-}
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 async function extractText(buffer, filename) {
   const name = filename.toLowerCase();
@@ -43,45 +27,6 @@ async function extractText(buffer, filename) {
     return result.value;
   }
   throw new Error('Unsupported file type. Please upload a PDF or DOCX.');
-}
-
-// Use Node https module — avoids Node 18 native fetch (undici) connection
-// reliability issues from some Netlify Lambda IPs (same fix as _store.js)
-function callOpenRouter(apiKey, payload) {
-  return new Promise((resolve, reject) => {
-    const bodyBuf = Buffer.from(JSON.stringify(payload), 'utf8');
-    const req = https.request(
-      {
-        hostname: 'openrouter.ai',
-        path:     '/api/v1/chat/completions',
-        method:   'POST',
-        headers: {
-          'Authorization':  `Bearer ${apiKey}`,
-          'Content-Type':   'application/json',
-          'Content-Length': bodyBuf.length,
-          'HTTP-Referer':   'https://izitravel.co.za',
-          'X-Title':        'IziTravel Quote Generator',
-          'User-Agent':     'IziTravel-Quote-Tool/1.0',
-        },
-      },
-      (res) => {
-        let data = '';
-        res.on('data', (chunk) => { data += chunk; });
-        res.on('end', () => resolve({ status: res.statusCode, body: data }));
-      }
-    );
-
-    req.on('error', (err) => reject(new Error(`OpenRouter connection error: ${err.message}`)));
-
-    // 20-second socket timeout — kills hung connections at TCP level
-    req.setTimeout(20000, () => {
-      req.destroy();
-      reject(new Error('The AI is taking longer than usual. Please try again — it usually works on the second attempt.'));
-    });
-
-    req.write(bodyBuf);
-    req.end();
-  });
 }
 
 exports.handler = async (event) => {
@@ -156,38 +101,28 @@ ${rawText}`;
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY not set in environment.');
 
-    // Hard 22-second deadline — wins the race before Netlify's 26s gateway limit
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('The AI is taking longer than usual. Please try again — it usually works on the second attempt.')), 22000)
-    );
-
-    const { body } = await Promise.race([
-      callOpenRouter(apiKey, {
-        model:      'anthropic/claude-haiku-4.5',
-        messages:   [{ role: 'user', content: prompt }],
-        max_tokens: 3000,
-        provider:   { order: ['Anthropic'], allow_fallbacks: true },
+    const apiRes = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://izitravel.co.za',
+        'X-Title': 'IziTravel Quote Generator',
+      },
+      body: JSON.stringify({
+        model: 'anthropic/claude-sonnet-4.5',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 4096,
       }),
-      timeout,
-    ]);
+    });
 
-    const aiData  = JSON.parse(body);
+    const aiData  = await apiRes.json();
     if (aiData.error) throw new Error(`OpenRouter error: ${aiData.error.message || JSON.stringify(aiData.error)}`);
     const content = aiData.choices?.[0]?.message?.content;
     if (!content) throw new Error(`No content in AI response. Raw: ${JSON.stringify(aiData).slice(0, 300)}`);
 
-    const cleaned = content.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-
-    // Try to parse — if truncated due to token limit, recover what we have
-    let quoteData;
-    try {
-      quoteData = JSON.parse(cleaned);
-    } catch {
-      // Attempt recovery: find last complete option and close the JSON
-      const recovered = repairJSON(cleaned);
-      if (!recovered) throw new Error('AI response was cut short. Please try again.');
-      quoteData = recovered;
-    }
+    const cleaned   = content.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+    const quoteData = JSON.parse(cleaned);
 
     // Agent-provided values always win
     if (cd.clientName)  quoteData.clientName  = cd.clientName;
