@@ -94,18 +94,23 @@ exports.handler = async (event) => {
 
     const cd = clientDetails || {};
 
-    const prompt = `You are a travel quote formatter for IziTravel, a South African travel agency.
+    // TWO-PASS EXTRACTION
+    // Pass 1: All options WITHOUT descriptions (compact — fits all options in ~1000 tokens)
+    // Pass 2: Descriptions only (run after pass 1, merged in)
+    // This way each call is small and fast, total stays within 22s.
+
+    const pass1Prompt = `You are a travel quote formatter for IziTravel, a South African travel agency.
 
 Extract structured package data from this supplier document and return ONLY valid JSON (no markdown, no extra text).
 
-Client details provided:
+Client details:
 - Name: ${cd.clientName || 'Unknown'}
 - Occasion: ${cd.occasion || ''}
 - Destination: ${cd.destination || ''}
 - Dates: ${cd.dates || ''}
 - Adults: ${cd.adults || '2'}
 
-Return this exact JSON structure:
+Return this exact JSON (omit description field — it will be fetched separately):
 {
   "clientName": "name from doc or provided",
   "destination": "destination name",
@@ -119,28 +124,36 @@ Return this exact JSON structure:
       "roomType": "room type if mentioned",
       "boardBasis": "meal plan e.g. Half Board, All Inclusive",
       "nights": "number of nights as string",
-      "description": "Full resort marketing description verbatim",
+      "description": "",
       "inclusions": ["inclusion 1", "inclusion 2"],
       "addedValue": ["added value item if present"],
-      "flightDetails": "Flight details specific to this option — departure city, flight numbers, times, dates, luggage allowance. Use 'See flight details below' if flights are shared. Use empty string \"\" if no flight info exists in the document.",
+      "flightDetails": "Option-specific flight details, or 'See flight details below' if shared, or \"\" if none.",
       "pricePerPerson": "R00,000.00",
       "totalPrice": "R00,000.00",
       "totalPax": "number of pax for this price if stated"
     }
   ],
-  "flightDetails": "Shared flight information that applies to ALL options (only populate if flights are not option-specific). Use empty string if each option has its own flightDetails or if no flights are mentioned.",
+  "flightDetails": "Shared flights applying to ALL options. Empty string if each option has its own or if none.",
   "exclusions": ["exclusion 1", "exclusion 2"]
 }
 
 Rules:
-- Keep resort descriptions verbatim and complete
+- Leave description as empty string ""
+- Include ALL options found — do not skip any
 - Each inclusion as its own array item
 - If multiple room types for same resort, create separate options
-- PRICING (critical): Search the entire document thoroughly for prices — they may appear as "R 45,000", "R45000", "ZAR 45,000", "from R45k", or in a table/grid. Extract every price found and assign to the correct option. If a price is genuinely absent from the document, omit the price fields entirely (do not write placeholder text).
-- FLIGHT DETAILS: If flight info exists in the document, extract it fully. If each option has different flights, put them in options[].flightDetails. If all options share the same flights, put them in the top-level flightDetails and set each option's flightDetails to "See flight details below". If NO flight info is in the document, use empty string "" — never write placeholder text like "not provided" or "not available".
-- IMPORTANT: Do NOT mention the supplier, wholesaler, booking platform or distributor name anywhere (e.g. "AFS", "Afristay", "Tourvest", "Thompsons", "Club Travel" etc). This is an IziTravel client-facing quote — the client must only see IziTravel as the source
-- Strip any booking reference codes, agent codes, or internal identifiers from the output
-- resortName should be ONLY the resort/hotel name and star rating — no supplier branding
+- PRICING: Search entire document — prices may appear as "R 45,000", "R45000", "ZAR 45,000", "from R45k", in tables. Extract every price.
+- Do NOT mention supplier names (AFS, Afristay, Tourvest, Thompsons, Club Travel etc)
+- Strip booking reference codes and internal identifiers
+- resortName: resort/hotel name and star rating only
+
+Supplier document:
+${rawText}`;
+
+    const pass2Prompt = (options) => `From the supplier document below, extract the VERBATIM marketing description for each resort listed. Return ONLY valid JSON:
+{"descriptions":[{"optionNumber":1,"description":"Full verbatim description..."},{"optionNumber":2,"description":"..."}]}
+Include every option. Keep descriptions complete and verbatim.
+Options to describe: ${options.map(o => `${o.optionNumber}. ${o.resortName}`).join(', ')}
 
 Supplier document:
 ${rawText}`;
@@ -148,36 +161,56 @@ ${rawText}`;
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY not set in environment.');
 
-    // Hard 22s deadline — fires before Netlify's 26s gateway limit
+    const callParams = {
+      model:    'anthropic/claude-haiku-4.5',
+      provider: { order: ['Anthropic'], allow_fallbacks: true },
+    };
+
+    // Hard 22s deadline covering both passes
     const hardTimeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('The AI is taking longer than usual. Please try again.')), 22000)
     );
 
-    const { body } = await Promise.race([
-      callOpenRouter(apiKey, {
-        model:      'anthropic/claude-haiku-4.5',
-        messages:   [{ role: 'user', content: prompt }],
-        max_tokens: 2000,
-        provider:   { order: ['Anthropic'], allow_fallbacks: true },
-      }),
-      hardTimeout,
-    ]);
+    const fullExtraction = (async () => {
+      // Pass 1: all options, no descriptions (~5-8s)
+      const { body: body1 } = await callOpenRouter(apiKey, {
+        ...callParams, max_tokens: 1500,
+        messages: [{ role: 'user', content: pass1Prompt }],
+      });
+      const data1 = JSON.parse(body1);
+      if (data1.error) throw new Error(`OpenRouter error: ${data1.error.message || JSON.stringify(data1.error)}`);
+      const c1 = data1.choices?.[0]?.message?.content;
+      if (!c1) throw new Error('No content in pass 1 response.');
+      const clean1 = c1.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+      let qd;
+      try { qd = JSON.parse(clean1); } catch { qd = repairJSON(clean1); }
+      if (!qd) throw new Error('Pass 1 response could not be parsed. Please try again.');
 
-    const aiData = JSON.parse(body);
-    if (aiData.error) throw new Error(`OpenRouter error: ${aiData.error.message || JSON.stringify(aiData.error)}`);
-    const content = aiData.choices?.[0]?.message?.content;
-    if (!content) throw new Error(`No content in AI response. Raw: ${JSON.stringify(aiData).slice(0, 300)}`);
+      // Pass 2: descriptions only (~5-8s, optional — if it fails we return without descriptions)
+      try {
+        if (qd.options && qd.options.length > 0) {
+          const { body: body2 } = await callOpenRouter(apiKey, {
+            ...callParams, max_tokens: 2000,
+            messages: [{ role: 'user', content: pass2Prompt(qd.options) }],
+          });
+          const data2 = JSON.parse(body2);
+          const c2 = data2.choices?.[0]?.message?.content || '';
+          const clean2 = c2.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+          let desc;
+          try { desc = JSON.parse(clean2); } catch { desc = repairJSON(clean2); }
+          if (desc && desc.descriptions) {
+            desc.descriptions.forEach(d => {
+              const opt = qd.options.find(o => o.optionNumber === d.optionNumber);
+              if (opt && d.description) opt.description = d.description;
+            });
+          }
+        }
+      } catch { /* descriptions failed — continue with empty descriptions */ }
 
-    const cleaned = content.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+      return qd;
+    })();
 
-    let quoteData;
-    try {
-      quoteData = JSON.parse(cleaned);
-    } catch {
-      // Response was cut short by token limit — recover what completed options we have
-      quoteData = repairJSON(cleaned);
-      if (!quoteData) throw new Error('AI response was incomplete. Please try again.');
-    }
+    let quoteData = await Promise.race([fullExtraction, hardTimeout]);
 
     if (cd.clientName)  quoteData.clientName  = cd.clientName;
     if (cd.destination) quoteData.destination = cd.destination;
