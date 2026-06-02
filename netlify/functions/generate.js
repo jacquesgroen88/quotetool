@@ -150,10 +150,11 @@ Rules:
 Supplier document:
 ${rawText}`;
 
-    const pass2Prompt = (options) => `From the supplier document below, extract the VERBATIM marketing description for each resort listed. Return ONLY valid JSON:
-{"descriptions":[{"optionNumber":1,"description":"Full verbatim description..."},{"optionNumber":2,"description":"..."}]}
-Include every option. Keep descriptions complete and verbatim.
-Options to describe: ${options.map(o => `${o.optionNumber}. ${o.resortName}`).join(', ')}
+    // Pass 2 is INDEPENDENT of pass 1 — it extracts all descriptions directly from
+    // the document, so both passes can run in PARALLEL (not sequentially).
+    const pass2Prompt = `From the supplier document below, extract the VERBATIM marketing description paragraph for EACH resort/package option, in the order they appear. Return ONLY valid JSON (no markdown):
+{"descriptions":[{"optionNumber":1,"description":"Full verbatim resort description paragraph..."},{"optionNumber":2,"description":"..."}]}
+Number them 1, 2, 3... in document order. Include every option. Keep each description complete and verbatim. Do NOT mention supplier names (AFS, Afristay, Thompsons, Tourvest, Club Travel etc).
 
 Supplier document:
 ${rawText}`;
@@ -166,39 +167,43 @@ ${rawText}`;
       provider: { order: ['Anthropic'], allow_fallbacks: true },
     };
 
-    // Hard 22s deadline covering both passes
+    // Hard 22s deadline covering both parallel passes
     const hardTimeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('The AI is taking longer than usual. Please try again.')), 22000)
     );
 
+    // ── Run BOTH passes in PARALLEL ──
+    const pass1 = callOpenRouter(apiKey, {
+      ...callParams, max_tokens: 2500,
+      messages: [{ role: 'user', content: pass1Prompt }],
+    });
+    const pass2 = callOpenRouter(apiKey, {
+      ...callParams, max_tokens: 2000,
+      messages: [{ role: 'user', content: pass2Prompt }],
+    }).catch(() => null); // descriptions are optional — never fail the whole quote
+
     const fullExtraction = (async () => {
-      // Pass 1: all options, no descriptions (~5-8s)
-      const { body: body1 } = await callOpenRouter(apiKey, {
-        ...callParams, max_tokens: 2000,
-        messages: [{ role: 'user', content: pass1Prompt }],
-      });
-      const data1 = JSON.parse(body1);
+      const [res1, res2] = await Promise.all([pass1, pass2]);
+
+      // Pass 1 — structured options (required)
+      const data1 = JSON.parse(res1.body);
       if (data1.error) throw new Error(`OpenRouter error: ${data1.error.message || JSON.stringify(data1.error)}`);
       const c1 = data1.choices?.[0]?.message?.content;
       if (!c1) throw new Error('No content in pass 1 response.');
       const clean1 = c1.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
       let qd;
       try { qd = JSON.parse(clean1); } catch { qd = repairJSON(clean1); }
-      if (!qd) throw new Error('Pass 1 response could not be parsed. Please try again.');
+      if (!qd) throw new Error('AI response could not be parsed. Please try again.');
 
-      // Pass 2: descriptions only (~5-8s, optional — if it fails we return without descriptions)
+      // Pass 2 — merge descriptions (optional)
       try {
-        if (qd.options && qd.options.length > 0) {
-          const { body: body2 } = await callOpenRouter(apiKey, {
-            ...callParams, max_tokens: 2000,
-            messages: [{ role: 'user', content: pass2Prompt(qd.options) }],
-          });
-          const data2 = JSON.parse(body2);
+        if (res2 && qd.options && qd.options.length > 0) {
+          const data2 = JSON.parse(res2.body);
           const c2 = data2.choices?.[0]?.message?.content || '';
           const clean2 = c2.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
           let desc;
           try { desc = JSON.parse(clean2); } catch { desc = repairJSON(clean2); }
-          if (desc && desc.descriptions) {
+          if (desc && Array.isArray(desc.descriptions)) {
             desc.descriptions.forEach(d => {
               const opt = qd.options.find(o => o.optionNumber === d.optionNumber);
               if (opt && d.description) opt.description = d.description;
