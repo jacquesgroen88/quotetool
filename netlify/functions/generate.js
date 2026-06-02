@@ -174,7 +174,7 @@ ${rawText}`;
     const fullExtraction = (async () => {
       // Pass 1: all options, no descriptions (~5-8s)
       const { body: body1 } = await callOpenRouter(apiKey, {
-        ...callParams, max_tokens: 1500,
+        ...callParams, max_tokens: 2000,
         messages: [{ role: 'user', content: pass1Prompt }],
       });
       const data1 = JSON.parse(body1);
