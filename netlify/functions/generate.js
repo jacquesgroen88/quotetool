@@ -1,9 +1,9 @@
 const pdfParse = require('pdf-parse');
 const mammoth  = require('mammoth');
+const https    = require('https');
 const fs       = require('fs');
 const path     = require('path');
 
-// Load .env for local dev (no dotenv dependency needed)
 try {
   const envPath = path.resolve(__dirname, '../../.env');
   if (fs.existsSync(envPath)) {
@@ -13,8 +13,6 @@ try {
     });
   }
 } catch {}
-
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 async function extractText(buffer, filename) {
   const name = filename.toLowerCase();
@@ -27,6 +25,55 @@ async function extractText(buffer, filename) {
     return result.value;
   }
   throw new Error('Unsupported file type. Please upload a PDF or DOCX.');
+}
+
+// Attempt to recover truncated JSON (when max_tokens cuts off mid-response)
+function repairJSON(str) {
+  for (const suffix of [']}', '}]}', '\n]}', '\n}]}']) {
+    try { return JSON.parse(str + suffix); } catch {}
+  }
+  const lastObj = str.lastIndexOf('},');
+  if (lastObj > 0) {
+    const cut = str.slice(0, lastObj + 1);
+    for (const suffix of [']}', '}]}', '\n]}', '\n}]}']) {
+      try { return JSON.parse(cut + suffix); } catch {}
+    }
+  }
+  return null;
+}
+
+// Use https module — avoids Node 18 native fetch (undici) reliability issues
+function callOpenRouter(apiKey, payload) {
+  return new Promise((resolve, reject) => {
+    const bodyBuf = Buffer.from(JSON.stringify(payload), 'utf8');
+    const req = https.request(
+      {
+        hostname: 'openrouter.ai',
+        path:     '/api/v1/chat/completions',
+        method:   'POST',
+        headers: {
+          'Authorization':  `Bearer ${apiKey}`,
+          'Content-Type':   'application/json',
+          'Content-Length': bodyBuf.length,
+          'HTTP-Referer':   'https://izitravel.co.za',
+          'X-Title':        'IziTravel Quote Generator',
+          'User-Agent':     'IziTravel-Quote-Tool/1.0',
+        },
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => resolve({ status: res.statusCode, body: data }));
+      }
+    );
+    req.on('error', (err) => reject(new Error(`Connection error: ${err.message}`)));
+    req.setTimeout(21000, () => {
+      req.destroy();
+      reject(new Error('Request timed out at socket level'));
+    });
+    req.write(bodyBuf);
+    req.end();
+  });
 }
 
 exports.handler = async (event) => {
@@ -101,30 +148,37 @@ ${rawText}`;
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY not set in environment.');
 
-    const apiRes = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://izitravel.co.za',
-        'X-Title': 'IziTravel Quote Generator',
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-sonnet-4.5',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 4096,
-      }),
-    });
+    // Hard 22s deadline — fires before Netlify's 26s gateway limit
+    const hardTimeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('The AI is taking longer than usual. Please try again.')), 22000)
+    );
 
-    const aiData  = await apiRes.json();
+    const { body } = await Promise.race([
+      callOpenRouter(apiKey, {
+        model:      'anthropic/claude-haiku-4.5',
+        messages:   [{ role: 'user', content: prompt }],
+        max_tokens: 2000,
+        provider:   { order: ['Anthropic'], allow_fallbacks: true },
+      }),
+      hardTimeout,
+    ]);
+
+    const aiData = JSON.parse(body);
     if (aiData.error) throw new Error(`OpenRouter error: ${aiData.error.message || JSON.stringify(aiData.error)}`);
     const content = aiData.choices?.[0]?.message?.content;
     if (!content) throw new Error(`No content in AI response. Raw: ${JSON.stringify(aiData).slice(0, 300)}`);
 
-    const cleaned   = content.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-    const quoteData = JSON.parse(cleaned);
+    const cleaned = content.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
 
-    // Agent-provided values always win
+    let quoteData;
+    try {
+      quoteData = JSON.parse(cleaned);
+    } catch {
+      // Response was cut short by token limit — recover what completed options we have
+      quoteData = repairJSON(cleaned);
+      if (!quoteData) throw new Error('AI response was incomplete. Please try again.');
+    }
+
     if (cd.clientName)  quoteData.clientName  = cd.clientName;
     if (cd.destination) quoteData.destination = cd.destination;
     if (cd.dates)       quoteData.dates       = cd.dates;
