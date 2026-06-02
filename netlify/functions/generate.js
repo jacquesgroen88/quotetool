@@ -146,7 +146,7 @@ ${rawText}`;
 
     const { body } = await Promise.race([
       callOpenRouter(apiKey, {
-        model:      'anthropic/claude-haiku-4-5',
+        model:      'anthropic/claude-haiku-4.5',
         messages:   [{ role: 'user', content: prompt }],
         max_tokens: 4096,
       }),
