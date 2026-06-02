@@ -15,6 +15,23 @@ try {
   }
 } catch {}
 
+// Attempt to recover a truncated JSON string by closing open structures
+function repairJSON(str) {
+  // Try simple suffixes first
+  for (const suffix of [']}', '}]}', '\n]}', '\n}]}', '""]}', '"]}']) {
+    try { return JSON.parse(str + suffix); } catch {}
+  }
+  // Find last complete option object (ends with },  or },\n) and close from there
+  const lastObjEnd = str.lastIndexOf('},');
+  if (lastObjEnd > 0) {
+    const truncated = str.slice(0, lastObjEnd + 1);
+    for (const suffix of [']}', '}]}', '\n]}', '\n}]}']) {
+      try { return JSON.parse(truncated + suffix); } catch {}
+    }
+  }
+  return null;
+}
+
 async function extractText(buffer, filename) {
   const name = filename.toLowerCase();
   if (name.endsWith('.pdf')) {
@@ -148,8 +165,8 @@ ${rawText}`;
       callOpenRouter(apiKey, {
         model:      'anthropic/claude-haiku-4.5',
         messages:   [{ role: 'user', content: prompt }],
-        max_tokens: 4096,
-        provider:   { order: ['Anthropic'], allow_fallbacks: false },
+        max_tokens: 3000,
+        provider:   { order: ['Anthropic'], allow_fallbacks: true },
       }),
       timeout,
     ]);
@@ -159,8 +176,18 @@ ${rawText}`;
     const content = aiData.choices?.[0]?.message?.content;
     if (!content) throw new Error(`No content in AI response. Raw: ${JSON.stringify(aiData).slice(0, 300)}`);
 
-    const cleaned   = content.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-    const quoteData = JSON.parse(cleaned);
+    const cleaned = content.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+
+    // Try to parse — if truncated due to token limit, recover what we have
+    let quoteData;
+    try {
+      quoteData = JSON.parse(cleaned);
+    } catch {
+      // Attempt recovery: find last complete option and close the JSON
+      const recovered = repairJSON(cleaned);
+      if (!recovered) throw new Error('AI response was cut short. Please try again.');
+      quoteData = recovered;
+    }
 
     // Agent-provided values always win
     if (cd.clientName)  quoteData.clientName  = cd.clientName;
