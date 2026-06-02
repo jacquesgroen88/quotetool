@@ -148,7 +148,7 @@ ${rawText}`;
       callOpenRouter(apiKey, {
         model:      'anthropic/claude-haiku-4.5',
         messages:   [{ role: 'user', content: prompt }],
-        max_tokens: 2000,
+        max_tokens: 4096,
         provider:   { order: ['Anthropic'], allow_fallbacks: false },
       }),
       timeout,
