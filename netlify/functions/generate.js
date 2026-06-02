@@ -139,11 +139,19 @@ ${rawText}`;
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY not set in environment.');
 
-    const { body } = await callOpenRouter(apiKey, {
-      model:      'anthropic/claude-sonnet-4.5',
-      messages:   [{ role: 'user', content: prompt }],
-      max_tokens: 2000,
-    });
+    // Hard 22-second deadline — wins the race before Netlify's 26s gateway limit
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('The AI is taking longer than usual. Please try again — it usually works on the second attempt.')), 22000)
+    );
+
+    const { body } = await Promise.race([
+      callOpenRouter(apiKey, {
+        model:      'anthropic/claude-sonnet-4.5',
+        messages:   [{ role: 'user', content: prompt }],
+        max_tokens: 2000,
+      }),
+      timeout,
+    ]);
 
     const aiData  = JSON.parse(body);
     if (aiData.error) throw new Error(`OpenRouter error: ${aiData.error.message || JSON.stringify(aiData.error)}`);
