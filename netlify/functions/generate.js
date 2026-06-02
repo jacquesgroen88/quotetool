@@ -133,7 +133,7 @@ Return this exact JSON (omit description field — it will be fetched separately
       "totalPax": "number of pax for this price if stated"
     }
   ],
-  "flightDetails": "The FULL shared flight schedule (every leg: date, flight number, route, departure/arrival times, class). IMPORTANT: travel documents often repeat the SAME flights under each option — that means flights are SHARED, so put the complete schedule HERE and set each option's flightDetails to 'See flight details below'. Only leave this empty if options genuinely have different flights.",
+  "flightDetails": "The FULL shared flight schedule. Put EACH flight leg on ITS OWN LINE separated by a newline character (\\n). Format each leg exactly as: 'DATE — FLIGHTNO (Class) — Origin to Destination — DepartTime–ArriveTime'. Example:\\n27 Sep 2026 — EK766 (Economy) — Johannesburg O.R. Tambo to Dubai — 22:20–08:20 +1\\n28 Sep 2026 — EK660 (Economy) — Dubai to Maldives (Velana) — 10:10–15:30. IMPORTANT: travel documents often repeat the SAME flights under each option — that means flights are SHARED, so put the complete schedule HERE and set each option's flightDetails to 'See flight details below'. Only leave empty if options genuinely have different flights.",
   "exclusions": ["exclusion 1", "exclusion 2"]
 }
 

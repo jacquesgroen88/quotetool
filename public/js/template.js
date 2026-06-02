@@ -161,11 +161,18 @@ function buildQuoteHTML(data, logoBase64) {
   }).join('');
 
   // ── Flights ──
-  const flightHTML = data.flightDetails
+  // Split the schedule into individual legs (one per line) and render each as a row
+  const flightLegs = (data.flightDetails || '')
+    .split(/\n+/)
+    .map(l => l.trim())
+    .filter(Boolean);
+  const flightHTML = flightLegs.length
     ? `<section class="sec flight-sec">
         <div class="sec-inner">
           <h2 class="sec-title">&#9992; Flight Details</h2>
-          <div class="flight-box">${esc(data.flightDetails).replace(/\n/g, '<br>')}</div>
+          <div class="flight-box">
+            ${flightLegs.map(leg => `<div class="flight-leg"><span class="flight-leg-icon">&#9992;</span><span>${esc(leg)}</span></div>`).join('')}
+          </div>
         </div>
       </section>`
     : '';
@@ -305,7 +312,10 @@ body{font-family:'Inter',sans-serif;background:#fff;color:var(--gray-900);line-h
 
 /* Flights */
 .flight-sec{background:#fff}
-.flight-box{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;padding:20px;font-size:13.5px;color:var(--gray-700);line-height:1.9}
+.flight-box{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;padding:8px 20px}
+.flight-leg{display:flex;align-items:flex-start;gap:10px;padding:13px 0;font-size:13.5px;color:var(--gray-700);line-height:1.5;border-bottom:1px solid var(--gray-200)}
+.flight-leg:last-child{border-bottom:none}
+.flight-leg-icon{color:var(--pink);flex-shrink:0;font-size:13px;margin-top:2px}
 
 /* Exclusions */
 .excl-sec{background:var(--gray-50);padding-top:0}
