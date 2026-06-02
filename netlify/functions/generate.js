@@ -137,12 +137,13 @@ Return this exact JSON (omit description field — it will be fetched separately
   "exclusions": ["exclusion 1", "exclusion 2"]
 }
 
-Rules:
-- Leave description as empty string ""
-- Include ALL options found — do not skip any
-- Each inclusion as its own array item
+Rules (CRITICAL — follow exactly to keep the response fast and complete):
+- Leave description as empty string "" (descriptions are fetched separately)
+- Include EVERY option found — never skip any. This is the most important rule.
+- INCLUSIONS: List a MAXIMUM of 6 inclusions per option, each kept SHORT (under 8 words). Group/summarise similar items (e.g. "All-inclusive meals & beverages" instead of listing every drink). Do NOT copy long verbatim beverage, activity, or restaurant lists — just the key highlights.
+- addedValue: max 3 short items, or omit
 - If multiple room types for same resort, create separate options
-- PRICING: Search entire document — prices may appear as "R 45,000", "R45000", "ZAR 45,000", "from R45k", in tables. Extract every price.
+- PRICING: Use the TOTAL price per person that INCLUDES airport tax/levies (the "Total" column, not the "excl VAT" base rate). totalPrice = the gross total for all pax. Prices may appear as "R 45,000", "R45000", "ZAR 45,000", in tables.
 - Do NOT mention supplier names (AFS, Afristay, Tourvest, Thompsons, Club Travel etc)
 - Strip booking reference codes and internal identifiers
 - resortName: resort/hotel name and star rating only
@@ -167,20 +168,26 @@ ${rawText}`;
       provider: { order: ['Anthropic'], allow_fallbacks: true },
     };
 
-    // Hard 22s deadline covering both parallel passes
+    // 22s guard on the CRITICAL path (pass 1 / options). Pass 1 runs ~8s.
     const hardTimeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('The AI is taking longer than usual. Please try again.')), 22000)
     );
 
     // ── Run BOTH passes in PARALLEL ──
+    // Pass 1 (options) is critical. Pass 2 (descriptions) is optional and gets
+    // its OWN 18s deadline that resolves null — so slow descriptions can never
+    // fail or delay the quote beyond returning options-only.
     const pass1 = callOpenRouter(apiKey, {
-      ...callParams, max_tokens: 2500,
+      ...callParams, max_tokens: 2000,
       messages: [{ role: 'user', content: pass1Prompt }],
     });
-    const pass2 = callOpenRouter(apiKey, {
-      ...callParams, max_tokens: 2000,
-      messages: [{ role: 'user', content: pass2Prompt }],
-    }).catch(() => null); // descriptions are optional — never fail the whole quote
+    const pass2 = Promise.race([
+      callOpenRouter(apiKey, {
+        ...callParams, max_tokens: 2000,
+        messages: [{ role: 'user', content: pass2Prompt }],
+      }).catch(() => null),
+      new Promise((resolve) => setTimeout(() => resolve(null), 18000)),
+    ]);
 
     const fullExtraction = (async () => {
       const [res1, res2] = await Promise.all([pass1, pass2]);
