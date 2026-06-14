@@ -30,6 +30,11 @@ const STAGES = {
   bookingConfirmed:        'aea09582-8d94-478d-9845-d219c453f7d6', // alias (back-compat)
 };
 
+// Contact custom-field IDs we write to
+const FIELDS = {
+  proposalLink: 'GZGD3NKFlV1JGnC0LGqd', // "Proposal Link" — last quote sent
+};
+
 function pit()     { return process.env.GHL_PIT_KEY || ''; }
 function enabled() { return !!pit(); }
 
@@ -131,6 +136,12 @@ async function addTags(contactId, tags) {
   catch (e) { return { ok: false, error: e.message }; }
 }
 
+async function setContactField(contactId, fieldId, value) {
+  if (!enabled() || !contactId || !fieldId) return { skipped: true };
+  try { const r = await ghReq('PUT', `/contacts/${contactId}`, { customFields: [{ id: fieldId, value }] }); return { ok: r.status >= 200 && r.status < 300 }; }
+  catch (e) { return { ok: false, error: e.message }; }
+}
+
 /** Send an email to a contact via GHL Conversations (logged on the contact). */
 async function sendEmail(contactId, subject, htmlBody) {
   if (!enabled() || !contactId) return { skipped: true };
@@ -141,8 +152,8 @@ async function sendEmail(contactId, subject, htmlBody) {
 }
 
 module.exports = {
-  enabled, STAGES, LOCATION, PIPELINE,
+  enabled, STAGES, FIELDS, LOCATION, PIPELINE,
   getContact, getCustomFieldMap, findOpportunity, findContactByEmail,
-  moveToStage, addNote, addTags, sendEmail,
+  moveToStage, addNote, addTags, setContactField, sendEmail,
   _raw: ghReq,
 };

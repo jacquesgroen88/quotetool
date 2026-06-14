@@ -39,6 +39,10 @@ body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-
 .fact b{color:var(--g900)}
 .contact{font-size:12px;color:var(--g500)}
 .came{font-size:11px;color:var(--g400)}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab{background:#fff;border:1.5px solid var(--g200);color:var(--g500);font-size:13px;font-weight:700;font-family:inherit;padding:8px 18px;border-radius:999px;cursor:pointer}
+.tab.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+.btns+.btns{margin-top:6px}
 .contact a{color:var(--pink);text-decoration:none}
 .btns{display:flex;gap:8px;margin-top:2px}
 .btn{flex:1;text-align:center;text-decoration:none;border-radius:9px;font-size:12.5px;font-weight:700;padding:10px;cursor:pointer;border:none;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
@@ -74,6 +78,10 @@ body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-
     </div>
     <button class="refresh" id="refreshBtn">↻ Refresh</button>
   </div>
+  <div class="tabs">
+    <button class="tab on" id="tab-toquote" data-group="to_quote">To Quote</button>
+    <button class="tab" id="tab-quoted" data-group="quoted">Quoted</button>
+  </div>
   <div id="content">
     <div class="state"><div class="spin"></div>Loading leads from GHL…</div>
   </div>
@@ -108,10 +116,25 @@ function card(l){
     +(facts.length?'<div class="facts">'+facts.join('')+'</div>':'')
     +(contact?'<div class="contact">'+contact+'</div>':'')
     +(came?'<div class="came">📥 Came in '+esc(came)+'</div>':'')
-    +'<div class="btns">'
+    + btnsHtml(l)
+    +'</div>';
+}
+function btnsHtml(l){
+  if(l.group==='quoted'){
+    const view=l.proposalView
+      ? '<a class="btn btn-q" href="'+esc(l.proposalView)+'" target="_blank" rel="noopener">📄 View proposal</a>'
+      : '<a class="btn btn-q" href="'+esc(l.quoteUrl)+'">📄 Quote</a>';
+    const edit=l.proposalEdit?'<a class="btn btn-c" href="'+esc(l.proposalEdit)+'">✏️ Edit</a>':'';
+    return '<div class="btns">'+view+edit+'</div>'
+      +'<div class="btns">'
+      +'<a class="btn btn-c" href="'+esc(l.quoteUrl)+'">➕ New quote</a>'
+      +'<a class="btn btn-q" href="/confirmation.html?cid='+esc(l.contactId)+'">✅ Confirm booking</a>'
+      +'</div>';
+  }
+  return '<div class="btns">'
     +'<a class="btn btn-q" href="'+esc(l.quoteUrl)+'">📄 Quote this lead</a>'
     +'<a class="btn btn-c" href="'+esc(l.ghlUrl)+'" target="_blank" rel="noopener">💬 Conversation</a>'
-    +'</div></div>';
+    +'</div>';
 }
 
 async function load(){
@@ -124,19 +147,28 @@ async function load(){
       $('content').innerHTML='<div class="banner">⚙️ Add <b>GHL_PIT_KEY</b> in Netlify environment variables (and redeploy) to pull live leads from your pipeline. See GHL-SETUP-CHECKLIST.md.</div><div class="state"><h3>No live data yet</h3>Once the key is set, your New Enquiry leads appear here automatically.</div>';
       return;
     }
-    const leads=data.leads||[];
-    const urgent=leads.filter(l=>l.urgent).length;
-    $('subhead').innerHTML=leads.length
-      ? '<b>'+leads.length+'</b> lead'+(leads.length!==1?'s':'')+' awaiting a quote'+(urgent?' · <span style="color:#b91c1c;font-weight:700">'+urgent+' urgent 🔥</span>':'')
-      : 'No leads waiting — you’re all caught up 🎉';
-    $('content').innerHTML=leads.length
-      ? '<div class="grid">'+leads.map(card).join('')+'</div>'
-      : '<div class="state"><h3>All caught up 🎉</h3>No leads in "New Enquiry" or "Quote Requested" right now.</div>';
+    allLeads=data.leads||[];
+    render();
   }catch(err){
     $('subhead').textContent='Error loading leads';
     $('content').innerHTML='<div class="state"><h3>Couldn’t load leads</h3>'+esc(err.message||'')+'</div>';
   }
 }
+let allLeads=[], activeGroup='to_quote';
+function render(){
+  const toQuote=allLeads.filter(l=>l.group!=='quoted');
+  const quoted =allLeads.filter(l=>l.group==='quoted');
+  const t1=$('tab-toquote'), t2=$('tab-quoted');
+  if(t1){ t1.textContent='To Quote ('+toQuote.length+')'; t1.classList.toggle('on',activeGroup==='to_quote'); }
+  if(t2){ t2.textContent='Quoted ('+quoted.length+')'; t2.classList.toggle('on',activeGroup==='quoted'); }
+  const urgent=toQuote.filter(l=>l.urgent).length;
+  $('subhead').innerHTML='<b>'+toQuote.length+'</b> to quote'+(urgent?' · <span style="color:#b91c1c;font-weight:700">'+urgent+' urgent 🔥</span>':'')+' · <b>'+quoted.length+'</b> quoted';
+  const list=activeGroup==='quoted'?quoted:toQuote;
+  $('content').innerHTML=list.length
+    ? '<div class="grid">'+list.map(card).join('')+'</div>'
+    : '<div class="state"><h3>'+(activeGroup==='quoted'?'No quoted leads yet':'All caught up 🎉')+'</h3></div>';
+}
+['tab-toquote','tab-quoted'].forEach(id=>{ const el=$(id); if(el) el.addEventListener('click',()=>{ activeGroup=el.getAttribute('data-group'); render(); }); });
 $('refreshBtn').addEventListener('click', load);
 load();
 </script>

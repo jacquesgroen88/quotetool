@@ -32,8 +32,11 @@ exports.handler = async (event) => {
   const STAGE_NAME = {
     [ghl.STAGES.newEnquiry]:     'New Enquiry',
     [ghl.STAGES.quoteRequested]: 'Quote Requested',
+    [ghl.STAGES.quoteSent]:      'Quote Sent',
+    [ghl.STAGES.quoteFollowUp]:  'Quote Follow-Up',
   };
-  const STAGE_ORDER = { 'New Enquiry': 0, 'Quote Requested': 1 };
+  const STAGE_ORDER    = { 'New Enquiry': 0, 'Quote Requested': 1, 'Quote Sent': 2, 'Quote Follow-Up': 3 };
+  const QUOTED_STAGES  = { [ghl.STAGES.quoteSent]: 1, [ghl.STAGES.quoteFollowUp]: 1 };
 
   try {
     const { json } = await ghl._raw('GET', `/opportunities/search?location_id=${ghl.LOCATION}&pipeline_id=${ghl.PIPELINE}&status=open&limit=100`, null);
@@ -58,8 +61,14 @@ exports.handler = async (event) => {
       const urgent = mu != null && mu >= 0 && mu <= 1;
       const tags = (contact && contact.tags) || (o.contact && o.contact.tags) || [];
 
+      const group = QUOTED_STAGES[o.pipelineStageId] ? 'quoted' : 'to_quote';
+      const proposalView = g('proposal_link');
+      let proposalEdit = '';
+      if (proposalView) { const m = proposalView.match(/[?&]id=([^&]+)/); if (m) proposalEdit = '/?edit=' + m[1]; }
+
       return {
         contactId:   cId,
+        group, proposalView, proposalEdit,
         name:        (o.contact && o.contact.name) || [contact && contact.firstName, contact && contact.lastName].filter(Boolean).join(' ').trim() || 'Lead',
         email:       (contact && contact.email) || (o.contact && o.contact.email) || '',
         phone:       (contact && contact.phone) || (o.contact && o.contact.phone) || '',

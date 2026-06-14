@@ -27,7 +27,10 @@ exports.handler = async (event) => {
     }
     const monetaryValue = (value != null && !isNaN(value)) ? Math.round(Number(value)) : undefined;
     await ghl.moveToStage({ contactId, name: name || 'Travel enquiry', stageId: ghl.STAGES.quoteSent, monetaryValue });
-    if (quoteUrl) await ghl.addNote(contactId, `📄 Quote sent to client — ${quoteUrl}`);
+    if (quoteUrl) {
+      await ghl.addNote(contactId, `📄 Quote sent to client — ${quoteUrl}`);
+      await ghl.setContactField(contactId, ghl.FIELDS.proposalLink, quoteUrl); // for the Leads → Quoted view
+    }
     return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, value: monetaryValue }) };
   } catch (err) {
     return { statusCode: 500, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: err.message || 'Failed.' }) };
