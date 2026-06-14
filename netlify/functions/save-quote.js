@@ -1,4 +1,5 @@
 const store = require('./_store');
+const ghl   = require('./_ghl');
 const { randomUUID } = require('crypto'); // built-in — no uuid package needed
 const fs   = require('fs');
 const path = require('path');
@@ -24,7 +25,7 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
 
   try {
-    const { quoteData, logoBase64, quoteId: existingId } = JSON.parse(event.body);
+    const { quoteData, logoBase64, quoteId: existingId, contactId } = JSON.parse(event.body);
     if (!quoteData) throw new Error('quoteData is required');
 
     // existingId is a gist ID for updates, or undefined for new quotes
@@ -43,6 +44,7 @@ exports.handler = async (event) => {
       occasion:    quoteData.occasion    || '',
       adults:      quoteData.adults      || '',
       children:    quoteData.children    || '',
+      contactId:   contactId || null,    // GHL contact, when started from a lead
     };
 
     // setJSON returns the actual storage key (gist ID in prod, may differ from inputId for new quotes)
@@ -52,6 +54,14 @@ exports.handler = async (event) => {
     // Build the public view URL
     const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'http://localhost:3002';
     const quoteUrl = `${siteUrl}/.netlify/functions/view-quote?id=${quoteId}`;
+
+    // Push the quote back to GHL — only on the FIRST save (not silent auto-saves
+    // after edits), so the timeline gets one "quote sent" note, not many.
+    if (contactId && !existingId) {
+      const oppName = [record.clientName, record.destination].filter(Boolean).join(' — ');
+      await ghl.moveToStage({ contactId, name: oppName || 'Travel enquiry', stageId: ghl.STAGES.quoteSent });
+      await ghl.addNote(contactId, `📄 Quote sent via tool — ${quoteUrl}`);
+    }
 
     return {
       statusCode: 200,

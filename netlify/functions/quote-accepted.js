@@ -5,6 +5,19 @@
  * This ensures Make.com always receives structured JSON — no 'value' wrapping.
  */
 const https = require('https');
+const ghl   = require('./_ghl');
+const fs    = require('fs');
+const path  = require('path');
+
+try {
+  const envPath = path.resolve(__dirname, '../../.env');
+  if (fs.existsSync(envPath)) {
+    fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+      const m = line.match(/^([^#=]+)=(.*)$/);
+      if (m && !process.env[m[1].trim()]) process.env[m[1].trim()] = m[2].trim();
+    });
+  }
+} catch {}
 
 const MAKE_WEBHOOK = 'https://hook.eu2.make.com/bjdc1oe65zcqw7k5fckx592fssqh5upv';
 
@@ -46,6 +59,20 @@ exports.handler = async (event) => {
       req.write(buf);
       req.end();
     });
+
+    // Advance the GHL opportunity on acceptance (best-effort; matched by client email)
+    try {
+      const payload = JSON.parse(body);
+      const email = payload.email || payload.clientEmail;
+      if (email && ghl.enabled()) {
+        const contact = await ghl.findContactByEmail(email);
+        if (contact && contact.id) {
+          await ghl.addTags(contact.id, ['quote-accepted']);
+          await ghl.moveToStage({ contactId: contact.id, stageId: ghl.STAGES.quoteFollowUp });
+          await ghl.addNote(contact.id, `👍 Client accepted quote ${payload.quoteRef || ''} (${(payload.selectedOption || {}).resortName || ''})`);
+        }
+      }
+    } catch { /* GHL update is best-effort */ }
 
     return {
       statusCode: 200,

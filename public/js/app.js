@@ -12,6 +12,7 @@ const App = (() => {
     quoteUrl:     null,         // Shareable client link from save-quote
     editQuoteId:  null,         // UUID of the saved quote being edited (null = new quote)
     quoteHistory: [],           // Stack of previous quoteData states for undo (max 10)
+    leadContactId: null,        // GHL contact id when this quote was started from a lead
   };
 
   // ── DOM refs ───────────────────────────────────────────────────────────────
@@ -154,6 +155,28 @@ const App = (() => {
     if (btn) { btn.textContent = pct > 0 ? '✓ Applied!' : '✓ Reset'; setTimeout(() => { btn.textContent = 'Apply Markup'; }, 2000); }
   }
 
+  // ── Prefill from a GHL lead (?cid=) ─────────────────────────────────────────
+  // Fetches the lead's details server-side (PII stays out of the URL) and fills
+  // the form. The function also advances the GHL opportunity to "Quote Requested".
+  async function prefillFromLead(cid) {
+    try {
+      state.leadContactId = cid;
+      const res  = await fetch('/.netlify/functions/lead-prefill?cid=' + encodeURIComponent(cid));
+      const data = await res.json();
+      const p = data && data.prefill;
+      if (!p) return;
+      const set = (id, v) => { const el = $(id); if (el && v) el.value = v; };
+      set('f-clientName', p.clientName);
+      set('f-destination', p.destination);
+      set('f-dates', p.dates);
+      set('f-phone', p.phone);
+      set('f-email', p.email);
+      if (p.adults) { const el = $('f-adults'); if (el && [...el.options].some(o => o.value === p.adults)) el.value = p.adults; }
+      const ds = $('detect-status');
+      if (ds) { ds.textContent = '✓ Lead loaded from GHL — upload the supplier doc and generate.'; ds.className = 'detect-status success'; }
+    } catch { /* prefill is best-effort */ }
+  }
+
   // ── Auto-detect ────────────────────────────────────────────────────────────
   async function runDetect(file) {
     try {
@@ -248,7 +271,8 @@ const App = (() => {
     try {
       if (!silent) setQuoteLink(null); // show "Generating link…" for new saves only
       const body = { quoteData, logoBase64: state.logoBase64 };
-      if (state.editQuoteId) body.quoteId = state.editQuoteId; // update existing record
+      if (state.editQuoteId)   body.quoteId   = state.editQuoteId; // update existing record
+      if (state.leadContactId) body.contactId = state.leadContactId; // push stage back to GHL
       const res = await fetch('/.netlify/functions/save-quote', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -338,6 +362,21 @@ const App = (() => {
       const waText = encodeURIComponent('Hi! Here is your IziTravel quote: ' + url);
       waBtn.href = `https://wa.me/?text=${waText}`;
       waSection.style.display = 'block';
+    }
+
+    // Email-to-client button — opens Terri's mail client, prefilled with the link
+    const emailBtn = $('email-btn');
+    if (emailBtn) {
+      const to   = (state.quoteData && state.quoteData.email) || '';
+      const dest = (state.quoteData && state.quoteData.destination) || 'your holiday';
+      const name = (state.quoteData && (state.quoteData.clientName || '')) || 'there';
+      const subj = encodeURIComponent('Your IziTravel Quote — ' + dest);
+      const bodyTxt = encodeURIComponent(
+        `Hi ${name},\n\nThank you for your enquiry! Here is your personalised IziTravel quote:\n${url}\n\n` +
+        `Click through to view the options and select your favourite. Any questions, just reply or WhatsApp me.\n\nWarm regards,\nTerri\nIziTravel`
+      );
+      emailBtn.href = `mailto:${to}?subject=${subj}&body=${bodyTxt}`;
+      emailBtn.style.display = to ? 'inline-flex' : 'none';
     }
 
     // Also populate the edit link (for Terri to come back and edit)
@@ -502,8 +541,10 @@ const App = (() => {
     const params      = new URLSearchParams(location.search);
     const editId      = params.get('edit');
     const duplicateId = params.get('duplicate');
+    const cid         = params.get('cid');
     if (editId)      loadQuoteForEdit(editId);
     else if (duplicateId) loadQuoteForEdit(duplicateId, { asNew: true });
+    else if (cid)    prefillFromLead(cid);
 
     // Generate button
     const genBtn = $('generate-btn');

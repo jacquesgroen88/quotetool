@@ -3,6 +3,7 @@ const ConfApp = (() => {
   let state = {
     file: null, confirmationData: null, logoBase64: null,
     currentBlobUrl: null, confirmationId: null, confirmationUrl: null,
+    leadContactId: null,
   };
   const $ = (id) => document.getElementById(id);
 
@@ -111,6 +112,7 @@ const ConfApp = (() => {
       if (!silent) setLink(null);
       const body = { confirmationData: state.confirmationData, logoBase64: state.logoBase64 };
       if (state.confirmationId) body.confirmationId = state.confirmationId;
+      if (state.leadContactId)  body.contactId      = state.leadContactId;
       const res = await fetch('/.netlify/functions/save-confirmation', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       });
@@ -185,6 +187,8 @@ const ConfApp = (() => {
 
   async function init() {
     state.logoBase64 = await loadLogo();
+    const cid = new URLSearchParams(location.search).get('cid');
+    if (cid) state.leadContactId = cid;
     initDropZone();
     $('generate-btn') && $('generate-btn').addEventListener('click', runGenerate);
     $('download-btn') && $('download-btn').addEventListener('click', downloadConfirmation);

@@ -1,4 +1,5 @@
 const store = require('./_store');
+const ghl   = require('./_ghl');
 const { randomUUID } = require('crypto');
 const fs   = require('fs');
 const path = require('path');
@@ -29,7 +30,7 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
 
   try {
-    const { confirmationData, logoBase64, confirmationId: existingId } = JSON.parse(event.body);
+    const { confirmationData, logoBase64, confirmationId: existingId, contactId } = JSON.parse(event.body);
     if (!confirmationData) throw new Error('confirmationData is required');
 
     const inputId = existingId || randomUUID();
@@ -43,6 +44,7 @@ exports.handler = async (event) => {
       clientName:  confirmationData.clientName  || 'Unknown',
       destination: confirmationData.destination || 'Unknown',
       dates:       datesOf(confirmationData),
+      contactId:   contactId || null,
     };
 
     const actualId = await store.setJSON(inputId, record);
@@ -50,6 +52,13 @@ exports.handler = async (event) => {
 
     const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'http://localhost:3002';
     const confirmationUrl = `${siteUrl}/.netlify/functions/view-confirmation?id=${confId}`;
+
+    // Push to GHL → Booking Confirmed — only on the first save (not silent re-saves)
+    if (contactId && !existingId) {
+      const oppName = [record.clientName, record.destination].filter(Boolean).join(' — ');
+      await ghl.moveToStage({ contactId, name: oppName || 'Booking', stageId: ghl.STAGES.bookingConfirmed, status: 'won' });
+      await ghl.addNote(contactId, `✅ Booking confirmation sent — ${confirmationUrl}`);
+    }
 
     return {
       statusCode: 200,
