@@ -16,13 +16,18 @@ const VERSION   = '2021-07-28';
 const LOCATION  = process.env.GHL_LOCATION || 'LrnHCFtZlP8Kxex8fUpv';
 const PIPELINE  = process.env.GHL_PIPELINE || 'FPuzKcSy3JDf2R8jhGyz';
 
-// Sales Pipeline stages (from the live Izi Travel sub-account)
+// Sales Pipeline stages (full lifecycle — from the live Izi Travel sub-account)
 const STAGES = {
-  newEnquiry:       '35ee9266-72b1-4222-a77f-b35eb5460393',
-  quoteRequested:   '07c693fe-c777-441b-8691-62bee175aa11',
-  quoteSent:        '31f8120d-baf3-407f-b29d-c87ff380de9b',
-  quoteFollowUp:    'd5e26e16-68ba-43a4-a40f-67c23d26c8ca',
-  bookingConfirmed: 'aea09582-8d94-478d-9845-d219c453f7d6',
+  newEnquiry:              '35ee9266-72b1-4222-a77f-b35eb5460393',
+  quoteRequested:          '07c693fe-c777-441b-8691-62bee175aa11',
+  quoteSent:               '31f8120d-baf3-407f-b29d-c87ff380de9b',
+  quoteFollowUp:           'd5e26e16-68ba-43a4-a40f-67c23d26c8ca',
+  bookingConfirmationSent: 'aea09582-8d94-478d-9845-d219c453f7d6',
+  invoiced:                'dbda7d9e-d86b-41bc-b9f0-2f963c1d692d',
+  depositPaid:             'ce5d9259-cd27-4883-be9f-e42e84a9aeef',
+  paidInFull:              'e4c022a0-642f-44c5-ad04-6cba23855157',
+  commissionSplit:         'fbe958ee-253a-4a1b-80b6-4278378a2cde',
+  bookingConfirmed:        'aea09582-8d94-478d-9845-d219c453f7d6', // alias (back-compat)
 };
 
 function pit()     { return process.env.GHL_PIT_KEY || ''; }

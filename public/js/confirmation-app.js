@@ -3,7 +3,7 @@ const ConfApp = (() => {
   let state = {
     file: null, confirmationData: null, logoBase64: null,
     currentBlobUrl: null, confirmationId: null, confirmationUrl: null,
-    leadContactId: null,
+    leadContactId: null, clientEmail: null, clientPhone: null,
   };
   const $ = (id) => document.getElementById(id);
 
@@ -137,8 +137,29 @@ const ConfApp = (() => {
     $('link-copy').addEventListener('click', () => {
       navigator.clipboard.writeText(url).then(() => { $('link-copy').textContent = '✓'; setTimeout(() => { $('link-copy').textContent = 'Copy'; }, 1800); });
     });
+    const cd    = state.confirmationData || {};
+    const cname = cd.clientName || (cd.passengers && cd.passengers[0] && [cd.passengers[0].title, cd.passengers[0].firstName].filter(Boolean).join(' ')) || 'there';
+    const dest  = cd.destination || 'your holiday';
+
     const waSec = $('wa-btn-section'), waBtn = $('wa-btn');
-    if (waSec && waBtn) { waBtn.href = `https://wa.me/?text=${encodeURIComponent('Hi! Here is your IziTravel booking confirmation: ' + url)}`; waSec.style.display = 'block'; }
+    if (waSec && waBtn) {
+      const waNum  = normWa(state.clientPhone);
+      const waText = encodeURIComponent(`Hi ${cname}! Here is your IziTravel booking confirmation for ${dest}: ${url}`);
+      const waHref = waNum ? `https://wa.me/${waNum}?text=${waText}` : `https://wa.me/?text=${waText}`;
+      waBtn.href = waHref;
+      waBtn.onclick = (e) => { e.preventDefault(); onSend(waHref); };
+      waSec.style.display = 'block';
+    }
+    const emailBtn = $('email-btn');
+    if (emailBtn) {
+      const to = state.clientEmail || '';
+      const subj = encodeURIComponent('Your IziTravel Booking Confirmation — ' + dest);
+      const bodyTxt = encodeURIComponent(`Hi ${cname},\n\nGreat news — here is your IziTravel booking confirmation:\n${url}\n\nPlease check all the details and let me know if anything needs adjusting.\n\nWarm regards,\nTerri\nIziTravel`);
+      const mailHref = `mailto:${to}?subject=${subj}&body=${bodyTxt}`;
+      emailBtn.href = mailHref;
+      emailBtn.onclick = (e) => { e.preventDefault(); onSend(mailHref); };
+      emailBtn.style.display = to ? 'inline-flex' : 'none';
+    }
   }
 
   // ── Supplier price-check card ──
@@ -185,10 +206,55 @@ const ConfApp = (() => {
     $('detect-status').className = 'detect-status success';
   }
 
+  // Prefill from a GHL lead (when opened via "Confirm booking" — ?cid=).
+  // Uses noadvance=1 so it does NOT move the opportunity stage back.
+  async function prefillFromLead(cid) {
+    state.leadContactId = cid;
+    try {
+      const res  = await fetch('/.netlify/functions/lead-prefill?cid=' + encodeURIComponent(cid) + '&noadvance=1');
+      const data = await res.json();
+      const p = data && data.prefill;
+      if (!p) return;
+      state.clientEmail = p.email || null;
+      state.clientPhone = p.phone || null;
+      const set = (id, v) => { const el = $(id); if (el && v) el.value = v; };
+      set('f-clientName', p.clientName);
+      set('f-destination', p.destination);
+    } catch { /* best-effort */ }
+  }
+  function normWa(phone) {
+    let d = String(phone || '').replace(/[^0-9]/g, '');
+    if (!d) return '';
+    if (d.charAt(0) === '0') d = '27' + d.slice(1);
+    return d;
+  }
+  function confTotal() {
+    const t = state.confirmationData && state.confirmationData.pricing && state.confirmationData.pricing.total;
+    if (!t) return null;
+    const n = parseFloat(String(t).replace(/[^0-9.]/g, ''));
+    return isNaN(n) ? null : Math.round(n);
+  }
+  function onSend(openHref) {
+    const doMark = !!state.leadContactId &&
+      confirm('Mark this booking confirmation as “Sent” in GHL?\nMoves the deal to Booking Confirmation Sent.');
+    window.open(openHref, '_blank');
+    if (doMark) {
+      fetch('/.netlify/functions/mark-confirmation-sent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactId:       state.leadContactId,
+          total:           confTotal(),
+          confirmationUrl: state.confirmationUrl,
+          name:            [(state.confirmationData && state.confirmationData.clientName) || '', (state.confirmationData && state.confirmationData.destination) || ''].filter(Boolean).join(' - '),
+        }),
+      }).catch(() => {});
+    }
+  }
+
   async function init() {
     state.logoBase64 = await loadLogo();
     const cid = new URLSearchParams(location.search).get('cid');
-    if (cid) state.leadContactId = cid;
+    if (cid) prefillFromLead(cid);
     initDropZone();
     $('generate-btn') && $('generate-btn').addEventListener('click', runGenerate);
     $('download-btn') && $('download-btn').addEventListener('click', downloadConfirmation);

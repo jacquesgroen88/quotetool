@@ -48,7 +48,11 @@ exports.handler = async (event) => {
     };
 
     // Advance the opportunity — Terri has opened this lead to quote it.
-    await ghl.moveToStage({ contactId: cid, name: prefill.clientName || 'Travel enquiry', stageId: ghl.STAGES.quoteRequested });
+    // Skip when ?noadvance=1 (e.g. prefilling the confirmation tool, where the
+    // deal is already past quoting and shouldn't be moved back).
+    if (!event.queryStringParameters?.noadvance) {
+      await ghl.moveToStage({ contactId: cid, name: prefill.clientName || 'Travel enquiry', stageId: ghl.STAGES.quoteRequested });
+    }
 
     return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ prefill }) };
   } catch (err) {

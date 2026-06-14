@@ -53,12 +53,9 @@ exports.handler = async (event) => {
     const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'http://localhost:3002';
     const confirmationUrl = `${siteUrl}/.netlify/functions/view-confirmation?id=${confId}`;
 
-    // Push to GHL → Booking Confirmed — only on the first save (not silent re-saves)
-    if (contactId && !existingId) {
-      const oppName = [record.clientName, record.destination].filter(Boolean).join(' - ');
-      await ghl.moveToStage({ contactId, name: oppName || 'Booking', stageId: ghl.STAGES.bookingConfirmed, status: 'won' });
-      await ghl.addNote(contactId, `✅ Booking confirmation sent — ${confirmationUrl}`);
-    }
+    // NOTE: generating a confirmation does NOT move the GHL stage. It moves to
+    // "Booking Confirmation Sent" only when Terri sends it and confirms — handled
+    // by mark-confirmation-sent. (contactId is stored on the record for that.)
 
     return {
       statusCode: 200,
