@@ -55,13 +55,10 @@ exports.handler = async (event) => {
     const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'http://localhost:3002';
     const quoteUrl = `${siteUrl}/.netlify/functions/view-quote?id=${quoteId}`;
 
-    // Push the quote back to GHL — only on the FIRST save (not silent auto-saves
-    // after edits), so the timeline gets one "quote sent" note, not many.
-    if (contactId && !existingId) {
-      const oppName = [record.clientName, record.destination].filter(Boolean).join(' — ');
-      await ghl.moveToStage({ contactId, name: oppName || 'Travel enquiry', stageId: ghl.STAGES.quoteSent });
-      await ghl.addNote(contactId, `📄 Quote sent via tool — ${quoteUrl}`);
-    }
+    // NOTE: generating/saving a quote does NOT move the GHL stage. The lead only
+    // moves to "Quote Sent" when Terri actually sends it (email/WhatsApp) and
+    // confirms — handled by the mark-quote-sent function. (contactId is stored
+    // on the record above so the send action can find the opportunity.)
 
     return {
       statusCode: 200,

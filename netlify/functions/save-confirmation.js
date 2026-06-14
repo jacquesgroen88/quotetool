@@ -55,7 +55,7 @@ exports.handler = async (event) => {
 
     // Push to GHL → Booking Confirmed — only on the first save (not silent re-saves)
     if (contactId && !existingId) {
-      const oppName = [record.clientName, record.destination].filter(Boolean).join(' — ');
+      const oppName = [record.clientName, record.destination].filter(Boolean).join(' - ');
       await ghl.moveToStage({ contactId, name: oppName || 'Booking', stageId: ghl.STAGES.bookingConfirmed, status: 'won' });
       await ghl.addNote(contactId, `✅ Booking confirmation sent — ${confirmationUrl}`);
     }

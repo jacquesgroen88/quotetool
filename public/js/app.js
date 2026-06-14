@@ -334,6 +334,37 @@ const App = (() => {
     if (el) el.innerHTML = `<span class="qlink-saving" style="color:#f87171">⚠ Link unavailable — use Download instead. (${msg})</span>`;
   }
 
+  // ── Send helpers (personalisation + mark-as-sent) ───────────────────────────
+  function normWa(phone) {
+    let d = String(phone || '').replace(/[^0-9]/g, '');
+    if (!d) return '';
+    if (d.charAt(0) === '0') d = '27' + d.slice(1);   // ZA local 0XX → intl 27XX
+    return d;
+  }
+  function avgOptionValue() {
+    const opts = (state.quoteData && state.quoteData.options) || [];
+    const nums = opts.map(o => parseFloat(String(o.totalPrice || '').replace(/[^0-9.]/g, ''))).filter(n => !isNaN(n) && n > 0);
+    if (!nums.length) return null;
+    return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
+  }
+  function onSend(openHref) {
+    // confirm() is synchronous, so window.open stays within the click gesture
+    const doMark = !!state.leadContactId &&
+      confirm('Mark this quote as “Sent” in GHL?\nMoves the lead to Quote Sent and sets the deal value to the average option price.');
+    window.open(openHref, '_blank');
+    if (doMark) {
+      fetch('/.netlify/functions/mark-quote-sent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactId: state.leadContactId,
+          value:     avgOptionValue(),
+          quoteUrl:  state.quoteUrl,
+          name:      [(state.quoteData && state.quoteData.clientName) || '', (state.quoteData && state.quoteData.destination) || ''].filter(Boolean).join(' - '),
+        }),
+      }).catch(() => {});
+    }
+  }
+
   function setQuoteLink(url) {
     const el = $('quote-link-section');
     if (!el) return;
@@ -355,27 +386,32 @@ const App = (() => {
       });
     });
 
-    // WhatsApp button
+    // WhatsApp + Email — personalised (name + number) and gated by a "mark as Sent?" prompt
+    const dest  = (state.quoteData && state.quoteData.destination) || 'your holiday';
+    const cname = (state.quoteData && state.quoteData.clientName) || 'there';
+
     const waSection = $('wa-btn-section');
     const waBtn     = $('wa-btn');
     if (waSection && waBtn) {
-      const waText = encodeURIComponent('Hi! Here is your IziTravel quote: ' + url);
-      waBtn.href = `https://wa.me/?text=${waText}`;
+      const waNum  = normWa((state.quoteData && state.quoteData.phone) || '');
+      const waText = encodeURIComponent(`Hi ${cname}! Here is your IziTravel quote for ${dest}: ${url}`);
+      const waHref = waNum ? `https://wa.me/${waNum}?text=${waText}` : `https://wa.me/?text=${waText}`;
+      waBtn.href = waHref;
+      waBtn.onclick = (e) => { e.preventDefault(); onSend(waHref); };
       waSection.style.display = 'block';
     }
 
-    // Email-to-client button — opens Terri's mail client, prefilled with the link
     const emailBtn = $('email-btn');
     if (emailBtn) {
-      const to   = (state.quoteData && state.quoteData.email) || '';
-      const dest = (state.quoteData && state.quoteData.destination) || 'your holiday';
-      const name = (state.quoteData && (state.quoteData.clientName || '')) || 'there';
+      const to = (state.quoteData && state.quoteData.email) || '';
       const subj = encodeURIComponent('Your IziTravel Quote — ' + dest);
       const bodyTxt = encodeURIComponent(
-        `Hi ${name},\n\nThank you for your enquiry! Here is your personalised IziTravel quote:\n${url}\n\n` +
+        `Hi ${cname},\n\nThank you for your enquiry! Here is your personalised IziTravel quote:\n${url}\n\n` +
         `Click through to view the options and select your favourite. Any questions, just reply or WhatsApp me.\n\nWarm regards,\nTerri\nIziTravel`
       );
-      emailBtn.href = `mailto:${to}?subject=${subj}&body=${bodyTxt}`;
+      const mailHref = `mailto:${to}?subject=${subj}&body=${bodyTxt}`;
+      emailBtn.href = mailHref;
+      emailBtn.onclick = (e) => { e.preventDefault(); onSend(mailHref); };
       emailBtn.style.display = to ? 'inline-flex' : 'none';
     }
 

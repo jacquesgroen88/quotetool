@@ -38,6 +38,7 @@ body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-
 .fact{font-size:12px;font-weight:600;color:var(--g700);background:var(--g50);border:1px solid var(--g200);border-radius:8px;padding:5px 10px}
 .fact b{color:var(--g900)}
 .contact{font-size:12px;color:var(--g500)}
+.came{font-size:11px;color:var(--g400)}
 .contact a{color:var(--pink);text-decoration:none}
 .btns{display:flex;gap:8px;margin-top:2px}
 .btn{flex:1;text-align:center;text-decoration:none;border-radius:9px;font-size:12.5px;font-weight:700;padding:10px;cursor:pointer;border:none;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
@@ -59,6 +60,7 @@ body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-
       <a href="/">Quotes</a>
       <a href="/confirmation.html">Confirmations</a>
       <a href="/leads.html" class="on">Leads</a>
+      <a href="https://app.reviewtap.co.za/v2/location/LrnHCFtZlP8Kxex8fUpv/opportunities/list" target="_blank" rel="noopener">Pipeline ↗</a>
     </div>
   </div>
 </header>
@@ -98,11 +100,13 @@ function card(l){
   if(l.urgent) tags.push('<span class="tag t-urg">🔥 Urgent</span>');
   (l.tags||[]).filter(t=>String(t).toLowerCase()!=='test').forEach(t=>tags.push(tagPill(t)));
   const contact=[l.phone?'<a href="tel:'+esc(l.phone)+'">'+esc(l.phone)+'</a>':'',l.email?'<a href="mailto:'+esc(l.email)+'">'+esc(l.email)+'</a>':''].filter(Boolean).join(' · ');
+  const came=l.createdAt?new Date(l.createdAt).toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'}):'';
   return '<div class="card'+(l.urgent?' urgent':'')+'">'
     +'<div class="crow"><div class="cname">'+esc(l.name)+'</div><span class="cstage">'+esc(l.stage)+'</span></div>'
     +(tags.length?'<div class="tags">'+tags.join('')+'</div>':'')
     +(facts.length?'<div class="facts">'+facts.join('')+'</div>':'')
     +(contact?'<div class="contact">'+contact+'</div>':'')
+    +(came?'<div class="came">📥 Came in '+esc(came)+'</div>':'')
     +'<div class="btns">'
     +'<a class="btn btn-q" href="'+esc(l.quoteUrl)+'">📄 Quote this lead</a>'
     +'<a class="btn btn-c" href="'+esc(l.ghlUrl)+'" target="_blank" rel="noopener">💬 Conversation</a>'
