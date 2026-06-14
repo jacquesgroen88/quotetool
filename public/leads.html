@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>IziTravel · Leads to Quote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--pink:#e63946;--pink-dark:#b91c1c;--pink-light:#fef2f2;--g50:#f9fafb;--g100:#f3f4f6;--g200:#e5e7eb;--g400:#9ca3af;--g500:#6b7280;--g700:#374151;--g900:#111827;--green:#16a34a;--green-l:#dcfce7;--blue:#2563eb;--radius:12px;--shadow:0 4px 24px rgba(0,0,0,.07)}
+body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-height:100vh}
+.app-header{background:#fff;border-bottom:1px solid var(--g200);position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.app-header-inner{max-width:1200px;margin:0 auto;padding:0 28px;height:70px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.app-logo img{height:48px;width:auto;display:block}
+.app-title{font-size:14px;font-weight:600;color:var(--g500)}.app-title span{color:var(--pink);font-weight:700}
+.nav{display:flex;gap:8px}
+.nav a{font-size:12px;color:var(--g500);text-decoration:none;font-weight:700;padding:8px 14px;border:1.5px solid var(--g200);border-radius:999px}
+.nav a:hover{border-color:var(--pink);color:var(--pink)}
+.nav a.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+.main{max-width:1200px;margin:0 auto;padding:32px 28px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.head h1{font-size:25px;font-weight:800;letter-spacing:-.02em}
+.head p{font-size:13.5px;color:var(--g500);margin-top:4px}
+.head .refresh{background:#fff;border:1.5px solid var(--g200);color:var(--g700);padding:9px 16px;border-radius:9px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
+.head .refresh:hover{border-color:var(--pink);color:var(--pink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.card{background:#fff;border:1px solid var(--g200);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;position:relative;transition:border-color .15s,box-shadow .15s}
+.card:hover{border-color:#fecaca;box-shadow:0 8px 30px rgba(0,0,0,.1)}
+.card.urgent{border-color:#fca5a5;box-shadow:0 0 0 1px #fca5a5}
+.crow{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.cname{font-size:17px;font-weight:800;letter-spacing:-.01em}
+.cstage{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--g400);background:var(--g100);padding:3px 9px;border-radius:999px;white-space:nowrap}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.03em}
+.t-urg{background:var(--pink);color:#fff}.t-ready{background:var(--green-l);color:#166534}.t-acc{background:#dbeafe;color:#1e40af}.t-x{background:var(--g100);color:var(--g500)}
+.facts{display:flex;flex-wrap:wrap;gap:7px}
+.fact{font-size:12px;font-weight:600;color:var(--g700);background:var(--g50);border:1px solid var(--g200);border-radius:8px;padding:5px 10px}
+.fact b{color:var(--g900)}
+.contact{font-size:12px;color:var(--g500)}
+.contact a{color:var(--pink);text-decoration:none}
+.btns{display:flex;gap:8px;margin-top:2px}
+.btn{flex:1;text-align:center;text-decoration:none;border-radius:9px;font-size:12.5px;font-weight:700;padding:10px;cursor:pointer;border:none;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn-q{background:var(--pink);color:#fff}.btn-q:hover{background:var(--pink-dark)}
+.btn-c{background:#fff;color:var(--g700);border:1.5px solid var(--g200)}.btn-c:hover{border-color:var(--blue);color:var(--blue)}
+.state{text-align:center;padding:70px 20px;color:var(--g400)}
+.state h3{font-size:16px;color:var(--g700);margin-bottom:6px}
+.spin{width:38px;height:38px;border:4px solid var(--g200);border-top-color:var(--pink);border-radius:50%;animation:s .8s linear infinite;margin:0 auto 16px}
+@keyframes s{to{transform:rotate(360deg)}}
+.banner{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 18px;font-size:13px;color:#92400e;margin-bottom:20px}
+</style>
+</head>
+<body>
+<header class="app-header">
+  <div class="app-header-inner">
+    <a class="app-logo" href="/leads.html"><img src="/assets/izilogo.jpg" alt="IziTravel"/></a>
+    <div class="app-title">Leads to Quote &nbsp;<span>Internal Tool</span></div>
+    <div class="nav">
+      <a href="/">Quotes</a>
+      <a href="/confirmation.html">Confirmations</a>
+      <a href="/leads.html" class="on">Leads</a>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <div class="head">
+    <div>
+      <h1>Leads to Quote</h1>
+      <p id="subhead">Loading your pipeline…</p>
+    </div>
+    <button class="refresh" id="refreshBtn">↻ Refresh</button>
+  </div>
+  <div id="content">
+    <div class="state"><div class="spin"></div>Loading leads from GHL…</div>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function tagPill(t){
+  const k=String(t).toLowerCase();
+  if(k==='ready-to-book')  return '<span class="tag t-ready">✅ Ready to book</span>';
+  if(k==='quote-accepted') return '<span class="tag t-acc">Accepted</span>';
+  if(k==='urgent'||k==='🔥 urgent') return '<span class="tag t-urg">🔥 Urgent</span>';
+  return '<span class="tag t-x">'+esc(t)+'</span>';
+}
+
+function card(l){
+  const facts=[];
+  if(l.destination) facts.push('<span class="fact">📍 <b>'+esc(l.destination)+'</b></span>');
+  if(l.dates)       facts.push('<span class="fact">📅 '+esc(l.dates)+'</span>');
+  if(l.pax)         facts.push('<span class="fact">👤 '+esc(l.pax)+' pax</span>');
+  if(l.budget)      facts.push('<span class="fact">💰 '+esc(l.budget)+'</span>');
+  const tags=[];
+  if(l.urgent) tags.push('<span class="tag t-urg">🔥 Urgent</span>');
+  (l.tags||[]).filter(t=>String(t).toLowerCase()!=='test').forEach(t=>tags.push(tagPill(t)));
+  const contact=[l.phone?'<a href="tel:'+esc(l.phone)+'">'+esc(l.phone)+'</a>':'',l.email?'<a href="mailto:'+esc(l.email)+'">'+esc(l.email)+'</a>':''].filter(Boolean).join(' · ');
+  return '<div class="card'+(l.urgent?' urgent':'')+'">'
+    +'<div class="crow"><div class="cname">'+esc(l.name)+'</div><span class="cstage">'+esc(l.stage)+'</span></div>'
+    +(tags.length?'<div class="tags">'+tags.join('')+'</div>':'')
+    +(facts.length?'<div class="facts">'+facts.join('')+'</div>':'')
+    +(contact?'<div class="contact">'+contact+'</div>':'')
+    +'<div class="btns">'
+    +'<a class="btn btn-q" href="'+esc(l.quoteUrl)+'">📄 Quote this lead</a>'
+    +'<a class="btn btn-c" href="'+esc(l.ghlUrl)+'" target="_blank" rel="noopener">💬 Conversation</a>'
+    +'</div></div>';
+}
+
+async function load(){
+  $('content').innerHTML='<div class="state"><div class="spin"></div>Loading leads from GHL…</div>';
+  try{
+    const res=await fetch('/.netlify/functions/list-leads');
+    const data=await res.json();
+    if(data.ghl==='disabled'){
+      $('subhead').textContent='GHL not connected yet';
+      $('content').innerHTML='<div class="banner">⚙️ Add <b>GHL_PIT_KEY</b> in Netlify environment variables (and redeploy) to pull live leads from your pipeline. See GHL-SETUP-CHECKLIST.md.</div><div class="state"><h3>No live data yet</h3>Once the key is set, your New Enquiry leads appear here automatically.</div>';
+      return;
+    }
+    const leads=data.leads||[];
+    const urgent=leads.filter(l=>l.urgent).length;
+    $('subhead').innerHTML=leads.length
+      ? '<b>'+leads.length+'</b> lead'+(leads.length!==1?'s':'')+' awaiting a quote'+(urgent?' · <span style="color:#b91c1c;font-weight:700">'+urgent+' urgent 🔥</span>':'')
+      : 'No leads waiting — you’re all caught up 🎉';
+    $('content').innerHTML=leads.length
+      ? '<div class="grid">'+leads.map(card).join('')+'</div>'
+      : '<div class="state"><h3>All caught up 🎉</h3>No leads in "New Enquiry" or "Quote Requested" right now.</div>';
+  }catch(err){
+    $('subhead').textContent='Error loading leads';
+    $('content').innerHTML='<div class="state"><h3>Couldn’t load leads</h3>'+esc(err.message||'')+'</div>';
+  }
+}
+$('refreshBtn').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>
