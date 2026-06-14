@@ -20,12 +20,26 @@ const GH_HOST   = 'api.github.com';
 const GIST_FILE = 'quote.json';
 const GIST_TAG  = 'izitravel-quote';
 const CONFIRMATION_TAG = 'izitravel-confirmation';
+const INVOICE_TAG      = 'izitravel-invoice';
 
-// A record is a confirmation if it carries recordType:'confirmation'; everything
-// else (including legacy records with no recordType) is treated as a quote.
-function tagFor(record)   { return (record && record.recordType === 'confirmation') ? CONFIRMATION_TAG : GIST_TAG; }
-function tagForType(type) { return type === 'confirmation' ? CONFIRMATION_TAG : GIST_TAG; }
-function typeOf(record)   { return (record && record.recordType === 'confirmation') ? 'confirmation' : 'quote'; }
+// recordType drives the storage namespace; missing type → legacy quote.
+function tagFor(record) {
+  const t = record && record.recordType;
+  if (t === 'confirmation') return CONFIRMATION_TAG;
+  if (t === 'invoice')      return INVOICE_TAG;
+  return GIST_TAG;
+}
+function tagForType(type) {
+  if (type === 'confirmation') return CONFIRMATION_TAG;
+  if (type === 'invoice')      return INVOICE_TAG;
+  return GIST_TAG;
+}
+function typeOf(record) {
+  const t = record && record.recordType;
+  if (t === 'confirmation') return 'confirmation';
+  if (t === 'invoice')      return 'invoice';
+  return 'quote';
+}
 
 // ── Environment detection ───────────────────────────────────────────────────
 function isProduction() {

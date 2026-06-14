@@ -121,6 +121,11 @@ const ConfApp = (() => {
       if (data.confirmationUrl) {
         state.confirmationUrl = data.confirmationUrl; state.confirmationId = data.confirmationId;
         if (!silent) setLink(data.confirmationUrl);
+        const ib = $('invoice-btn');
+        if (ib && state.confirmationId) {
+          ib.style.display = 'inline-flex';
+          ib.onclick = () => window.open('/invoice.html?from=' + encodeURIComponent(state.confirmationId) + (state.leadContactId ? '&cid=' + encodeURIComponent(state.leadContactId) : ''), '_blank');
+        }
       } else if (!silent) setLinkError(data.error || `HTTP ${res.status}`);
     } catch (err) { if (!silent) setLinkError((err && err.message) || 'Network error'); }
   }

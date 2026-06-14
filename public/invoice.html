@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>IziTravel · Invoice Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--pink:#e63946;--pink-dark:#b91c1c;--pink-light:#fef2f2;--g50:#f9fafb;--g100:#f3f4f6;--g200:#e5e7eb;--g400:#9ca3af;--g500:#6b7280;--g700:#374151;--g900:#111827;--green:#16a34a;--green-l:#dcfce7;--radius:12px;--shadow:0 4px 24px rgba(0,0,0,.07)}
+body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-height:100vh}
+.app-header{background:#fff;border-bottom:1px solid var(--g200);position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.app-header-inner{max-width:1200px;margin:0 auto;padding:0 28px;height:70px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.app-logo img{height:48px}.app-title{font-size:14px;font-weight:600;color:var(--g500)}.app-title span{color:var(--pink);font-weight:700}
+.nav{display:flex;gap:8px}.nav a{font-size:12px;color:var(--g500);text-decoration:none;font-weight:700;padding:8px 14px;border:1.5px solid var(--g200);border-radius:999px}.nav a:hover{border-color:var(--pink);color:var(--pink)}.nav a.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+.main{max-width:1200px;margin:0 auto;padding:28px;display:grid;grid-template-columns:380px 1fr;gap:24px;align-items:start}
+.card{background:#fff;border:1px solid var(--g200);border-radius:var(--radius);box-shadow:var(--shadow)}
+.fcard{padding:22px}
+.fcard h2{font-size:16px;font-weight:800;margin-bottom:3px}.fcard .sub{font-size:12px;color:var(--g400);margin-bottom:16px}
+.sec-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--g400);margin:14px 0 8px}
+.fg{margin-bottom:10px}.fg label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--g700);margin-bottom:4px}
+.fg input,.fg textarea{width:100%;padding:9px 11px;border:1.5px solid var(--g200);border-radius:8px;font-size:13px;font-family:inherit;outline:none}
+.fg input:focus,.fg textarea:focus{border-color:var(--pink)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.li{display:grid;grid-template-columns:1fr 96px;gap:6px;margin-bottom:6px}
+.li input{padding:8px 10px;font-size:12.5px}
+.addli{font-size:12px;color:var(--pink);font-weight:700;cursor:pointer;background:none;border:none;font-family:inherit;padding:4px 0}
+.gen{width:100%;padding:13px;background:var(--pink);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;margin-top:14px}
+.gen:hover{background:var(--pink-dark)}
+.right{display:flex;flex-direction:column;gap:16px;min-width:0}
+.preview-card{overflow:hidden;height:calc(100dvh - 220px);min-height:480px;display:flex;flex-direction:column}
+.preview-top{padding:11px 16px;border-bottom:1px solid var(--g100);background:var(--g50);font-size:12px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.05em}
+#inv-frame{flex:1;width:100%;border:none}
+.empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--g400);font-size:14px;text-align:center;padding:40px}
+.linkcard{padding:14px 16px}
+.lk-label{font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.lk-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lk-input{flex:1;min-width:160px;padding:9px 11px;border:1.5px solid var(--g200);border-radius:8px;font-size:12px;color:var(--g700);background:var(--g50)}
+.btn{border:none;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;padding:9px 14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;color:#fff}
+.b-copy{background:var(--g700)}.b-dl{background:var(--pink)}.b-wa{background:#25d366}.b-em{background:var(--pink)}
+@media(max-width:900px){.main{grid-template-columns:1fr}.preview-card{height:80vw}}
+</style>
+</head>
+<body>
+<header class="app-header">
+  <div class="app-header-inner">
+    <a class="app-logo" href="/invoice.html"><img src="/assets/izilogo.jpg" alt="IziTravel"/></a>
+    <div class="app-title">Invoice Generator &nbsp;<span>Internal Tool</span></div>
+    <div class="nav">
+      <a href="/leads.html">Leads</a><a href="/">Quotes</a><a href="/confirmation.html">Confirmations</a><a href="/invoice.html" class="on">Invoices</a>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <div class="card fcard">
+    <h2>New Invoice</h2>
+    <div class="sub">Pre-filled from the booking — review and generate.</div>
+
+    <div class="sec-lbl">Bill To</div>
+    <div class="fg"><label>Client name</label><input id="f-clientName" placeholder="e.g. Mr & Mrs Pohl"/></div>
+    <div class="row2">
+      <div class="fg"><label>Email</label><input id="f-email" type="email"/></div>
+      <div class="fg"><label>Phone</label><input id="f-phone" type="tel"/></div>
+    </div>
+    <div class="fg"><label>Trip / destination</label><input id="f-destination" placeholder="e.g. Maldives"/></div>
+
+    <div class="sec-lbl">Invoice</div>
+    <div class="row2">
+      <div class="fg"><label>Invoice no.</label><input id="f-invoiceNo"/></div>
+      <div class="fg"><label>Date</label><input id="f-date"/></div>
+    </div>
+    <div class="fg"><label>Due date</label><input id="f-dueDate" placeholder="e.g. 14 Aug 2026"/></div>
+
+    <div class="sec-lbl">Line items</div>
+    <div id="lines"></div>
+    <button class="addli" id="addLine">+ Add line</button>
+    <div class="fg" style="margin-top:8px"><label>Total</label><input id="f-total" placeholder="R0.00"/></div>
+
+    <div class="sec-lbl">Banking details</div>
+    <div class="fg"><label>Account name</label><input id="b-accountName"/></div>
+    <div class="row2">
+      <div class="fg"><label>Bank</label><input id="b-bank"/></div>
+      <div class="fg"><label>Account type</label><input id="b-accountType"/></div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Account no.</label><input id="b-accountNumber"/></div>
+      <div class="fg"><label>Branch code</label><input id="b-branchCode"/></div>
+    </div>
+
+    <div class="fg"><label>Notes (optional)</label><textarea id="f-notes" rows="2"></textarea></div>
+
+    <button class="gen" id="genBtn">🧾 Generate Invoice</button>
+  </div>
+
+  <div class="right">
+    <div class="card preview-card">
+      <div class="preview-top">Invoice Preview</div>
+      <div class="empty" id="inv-empty">Fill in the details and click <b>&nbsp;Generate Invoice</b>.</div>
+      <iframe id="inv-frame" style="display:none"></iframe>
+    </div>
+    <div class="card linkcard" id="link-card" style="display:none">
+      <div class="lk-label">🔗 Client Invoice Link</div>
+      <div class="lk-row" id="link-row"></div>
+    </div>
+  </div>
+</main>
+
+<script src="/js/invoice-template.js"></script>
+<script src="/js/invoice-app.js"></script>
+</body>
+</html>
