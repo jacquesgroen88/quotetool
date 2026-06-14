@@ -172,6 +172,10 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 .integrity-warn-text{color:#92400e;font-weight:600}
 .integrity-sub{font-size:11px;color:var(--gray-400);margin-top:9px;line-height:1.5}
 
+/* What's New notification dot */
+#whatsnew-badge{position:absolute;top:-4px;right:-4px;width:13px;height:13px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 0 rgba(239,68,68,.55);animation:wn-pulse 2.2s ease-out infinite;pointer-events:none}
+@keyframes wn-pulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}70%{box-shadow:0 0 0 7px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+
 /* ── Responsive ── */
 @media(max-width:900px){
   .editor-layout{grid-template-columns:1fr;height:auto}
@@ -233,7 +237,7 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
   <div class="app-header-inner">
     <a class="app-logo" href="/"><img src="/assets/izilogo.jpg" alt="IziTravel"/></a>
     <div class="app-title">Quote Generator &nbsp;<span>Internal Tool</span></div>
-    <button onclick="document.getElementById('updates-modal').style.display='flex'" style="padding:8px 16px;background:var(--pink-light);color:var(--pink-dark);border:1.5px solid #fecaca;border-radius:999px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='var(--pink-light)'">&#127381; What's New</button>
+    <button id="whatsnew-btn" onclick="openWhatsNew()" style="position:relative;padding:8px 16px;background:var(--pink-light);color:var(--pink-dark);border:1.5px solid #fecaca;border-radius:999px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='var(--pink-light)'">&#127381; What's New<span id="whatsnew-badge" aria-label="New updates available" style="display:none"></span></button>
   </div>
 </header>
 
@@ -500,6 +504,26 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 
 <!-- Update quote info card when editor opens -->
 <script>
+  // ── What's New notification ──
+  // Shows a red dot on the What's New button the first time each browser loads a
+  // version it hasn't seen. Opening the modal marks it seen (persists in
+  // localStorage), so it clears and stays cleared. Bump the version to re-announce.
+  const WHATSNEW_VERSION = '2026-06-14-supplier-price-check';
+  function openWhatsNew() {
+    document.getElementById('updates-modal').style.display = 'flex';
+    try { localStorage.setItem('izi_whatsnew_seen', WHATSNEW_VERSION); } catch (e) {}
+    const dot = document.getElementById('whatsnew-badge');
+    if (dot) dot.style.display = 'none';
+  }
+  (function initWhatsNewBadge() {
+    let seen = null;
+    try { seen = localStorage.getItem('izi_whatsnew_seen'); } catch (e) {}
+    if (seen !== WHATSNEW_VERSION) {
+      const dot = document.getElementById('whatsnew-badge');
+      if (dot) dot.style.display = 'block';
+    }
+  })();
+
   // Patch App.init to also update the quote info card
   const _origInit = App.init.bind(App);
   // We hook into renderChatHistory to also update the info card
