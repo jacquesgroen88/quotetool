@@ -19,6 +19,13 @@ const LOCAL_DIR = path.resolve(__dirname, '../../.netlify/blobs-local');
 const GH_HOST   = 'api.github.com';
 const GIST_FILE = 'quote.json';
 const GIST_TAG  = 'izitravel-quote';
+const CONFIRMATION_TAG = 'izitravel-confirmation';
+
+// A record is a confirmation if it carries recordType:'confirmation'; everything
+// else (including legacy records with no recordType) is treated as a quote.
+function tagFor(record)   { return (record && record.recordType === 'confirmation') ? CONFIRMATION_TAG : GIST_TAG; }
+function tagForType(type) { return type === 'confirmation' ? CONFIRMATION_TAG : GIST_TAG; }
+function typeOf(record)   { return (record && record.recordType === 'confirmation') ? 'confirmation' : 'quote'; }
 
 // ── Environment detection ───────────────────────────────────────────────────
 function isProduction() {
@@ -80,13 +87,13 @@ function ghRequest(method, path_, token, payload) {
 }
 
 function gistDescription(record) {
-  const opts  = (record.quoteData?.options || []).length;
+  const count = (record.quoteData?.options || []).length || (record.confirmationData ? 1 : 0);
   const parts = [
-    GIST_TAG,
+    tagFor(record),
     record.clientName  || 'Unknown',
     record.destination || 'Unknown',
     record.dates       || '',
-    String(opts),
+    String(count),
     record.createdAt   || new Date().toISOString(),
   ];
   return parts.join('|');
@@ -169,9 +176,14 @@ async function getJSON(key) {
 }
 
 /**
- * List all quote keys (gist IDs in prod, filenames locally).
+ * List record keys for a given type ('quote' | 'confirmation').
+ * Defaults to 'quote' so existing callers (admin-quotes) are unchanged.
+ * Prod: filters gists by the type's description tag.
+ * Local: reads each file and keeps records whose recordType matches.
  */
-async function listAll() {
+async function listAll(type = 'quote') {
+  const wantTag = tagForType(type);
+
   if (isProduction()) {
     const token = process.env.GITHUB_TOKEN;
     if (!token) throw new Error('GITHUB_TOKEN not set');
@@ -183,7 +195,7 @@ async function listAll() {
       if (status < 200 || status >= 300) break;
       const gists = JSON.parse(body);
       for (const g of gists) {
-        if (g.description && g.description.startsWith(GIST_TAG + '|')) ids.push(g.id);
+        if (g.description && g.description.startsWith(wantTag + '|')) ids.push(g.id);
       }
       if (gists.length < 100) break;
       page++;
@@ -191,10 +203,18 @@ async function listAll() {
     return ids;
   }
 
+  // Local dev: read each file and filter by recordType (missing → quote, so legacy is safe)
   ensureDir();
-  return fs.readdirSync(LOCAL_DIR)
-    .filter(f => f.endsWith('.json'))
-    .map(f => f.slice(0, -5));
+  const out = [];
+  for (const f of fs.readdirSync(LOCAL_DIR).filter(f => f.endsWith('.json'))) {
+    try {
+      const rec = JSON.parse(fs.readFileSync(path.join(LOCAL_DIR, f), 'utf8'));
+      if (typeOf(rec) === type) out.push(f.slice(0, -5));
+    } catch {
+      if (type === 'quote') out.push(f.slice(0, -5)); // unreadable → assume legacy quote
+    }
+  }
+  return out;
 }
 
 module.exports = { init, setJSON, getJSON, listAll };

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Admin — IziTravel Confirmations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--pink:#e63946;--gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;--gray-400:#94a3b8;--gray-500:#64748b;--gray-700:#334155;--gray-900:#0f172a}
+body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-900);min-height:100vh}
+header{background:#fff;border-bottom:1px solid var(--gray-200);padding:0 32px;display:flex;align-items:center;height:64px;gap:16px}
+header img{height:40px}header h1{font-size:16px;font-weight:700}
+header .badge{background:var(--pink);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase}
+header .spacer{flex:1}header a{font-size:13px;color:var(--gray-500);text-decoration:none;font-weight:500}header a:hover{color:var(--pink)}
+#loginView{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 64px);padding:24px}
+.login-card{background:#fff;border-radius:20px;padding:48px;max-width:380px;width:100%;box-shadow:0 4px 32px rgba(0,0,0,.08)}
+.login-card h2{font-size:22px;font-weight:800;margin-bottom:6px}.login-card p{font-size:13px;color:var(--gray-500);margin-bottom:28px}
+.field{margin-bottom:16px}.field label{display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.field input{width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;font-family:inherit;outline:none}
+.field input:focus{border-color:var(--pink)}
+.btn-primary{width:100%;background:var(--pink);color:#fff;border:none;padding:13px;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}
+.login-err{color:#ef4444;font-size:13px;margin-top:12px;display:none}
+#dashView{display:none;padding:32px}
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+.dash-title h2{font-size:22px;font-weight:800}.dash-title p{font-size:13px;color:var(--gray-500);margin-top:3px}
+.dash-actions{display:flex;gap:8px}
+.btn-secondary,.btn-export{background:#fff;border:1.5px solid var(--gray-200);color:var(--gray-700);padding:9px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
+.btn-secondary:hover{border-color:var(--pink);color:var(--pink)}.btn-export:hover{border-color:#16a34a;color:#16a34a}
+.stats-bar{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.stat-card{background:#fff;border-radius:14px;padding:20px 24px;flex:1;min-width:140px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.stat-num{font-size:28px;font-weight:800}.stat-lbl{font-size:12px;color:var(--gray-400);font-weight:500;margin-top:2px}
+.table-wrap{background:#fff;border-radius:16px;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--gray-50);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-500);padding:13px 16px;text-align:left;border-bottom:1px solid var(--gray-200)}
+tbody tr{border-bottom:1px solid var(--gray-100)}tbody tr:hover{background:var(--gray-50)}
+tbody td{padding:13px 16px;font-size:13.5px;color:var(--gray-700);vertical-align:middle}
+.td-name{font-weight:600;color:var(--gray-900)}.td-date{color:var(--gray-400);font-size:12px}
+.td-total{font-weight:700;color:var(--gray-900)}
+.pill{background:var(--gray-100);color:var(--gray-700);font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+.pill.margin{background:#dcfce7;color:#166534;margin-left:5px}
+.td-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.td-link a{display:inline-flex;align-items:center;gap:5px;background:var(--pink);color:#fff;text-decoration:none;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700}
+.td-details-btn{cursor:pointer;color:var(--gray-400);background:none;border:1px solid var(--gray-200);font-size:12px;font-family:inherit;padding:6px 10px;border-radius:8px}
+.td-details-btn:hover{color:var(--gray-700);border-color:var(--gray-400)}
+.detail-row{display:none}.detail-row.visible{display:table-row}
+.detail-row td{background:var(--gray-50);padding:14px 16px 18px 32px}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.detail-item .detail-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:3px}
+.detail-item .detail-val{font-size:13px;color:var(--gray-700);font-weight:500}
+.margin-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;text-transform:uppercase;margin-left:8px}
+.margin-badge.on{background:#dcfce7;color:#166534}.margin-badge.off{background:var(--gray-100);color:var(--gray-400)}
+.empty-state{text-align:center;padding:64px 32px;color:var(--gray-400);font-size:14px}
+.loading-row td{text-align:center;padding:48px;color:var(--gray-400)}
+</style>
+</head>
+<body>
+<header>
+  <img src="/assets/izilogo.jpg" alt="IziTravel"/>
+  <h1>Confirmations Dashboard</h1>
+  <span class="badge">Admin</span>
+  <span class="spacer"></span>
+  <a href="/confirmation.html">+ New Confirmation</a> &nbsp;
+  <a href="/admin.html">Quotes Admin →</a>
+</header>
+
+<div id="loginView">
+  <div class="login-card">
+    <h2>Admin Access</h2>
+    <p>Enter your password to view all confirmations.</p>
+    <form id="loginForm">
+      <div class="field"><label>Password</label><input type="password" id="passwordInput" placeholder="Enter admin password" autocomplete="current-password"/></div>
+      <button type="submit" class="btn-primary">Sign In</button>
+      <div class="login-err" id="loginErr">Incorrect password. Please try again.</div>
+    </form>
+  </div>
+</div>
+
+<div id="dashView">
+  <div class="dash-header">
+    <div class="dash-title"><h2>All Confirmations</h2><p>Every booking confirmation generated — tracked separately from quotes</p></div>
+    <div class="dash-actions">
+      <button class="btn-export" id="exportCsvBtn">&#11123; Export CSV</button>
+      <button class="btn-secondary" id="refreshBtn">↻ Refresh</button>
+    </div>
+  </div>
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-num" id="statTotal">—</div><div class="stat-lbl">Total Confirmations</div></div>
+    <div class="stat-card"><div class="stat-num" id="statToday">—</div><div class="stat-lbl">Today</div></div>
+    <div class="stat-card"><div class="stat-num" id="statMargin">—</div><div class="stat-lbl">With Margin</div></div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Client</th><th>Destination</th><th>Dates</th><th>Total</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody id="confBody"><tr class="loading-row"><td colspan="6">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let adminPassword = '';
+let all = [];
+document.getElementById('loginForm').addEventListener('submit', async (e) => { e.preventDefault(); const p = document.getElementById('passwordInput').value.trim(); if (!p) return; adminPassword = p; await load(); });
+document.getElementById('refreshBtn').addEventListener('click', () => load());
+document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+
+async function load() {
+  try {
+    const res = await fetch('/.netlify/functions/admin-confirmations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) });
+    const data = await res.json();
+    if (!res.ok) { document.getElementById('loginErr').style.display = 'block'; return; }
+    document.getElementById('loginErr').style.display = 'none';
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('dashView').style.display = 'block';
+    all = data.confirmations || [];
+    render(all);
+  } catch (err) { alert('Error loading confirmations: ' + err.message); }
+}
+
+function render(list) {
+  const today = new Date().toDateString();
+  document.getElementById('statTotal').textContent = list.length;
+  document.getElementById('statToday').textContent = list.filter(c => c.createdAt && new Date(c.createdAt).toDateString() === today).length;
+  document.getElementById('statMargin').textContent = list.filter(c => c.markup).length;
+  const tbody = document.getElementById('confBody');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No confirmations generated yet.</div></td></tr>'; return; }
+  tbody.innerHTML = list.map(c => {
+    const created = c.createdAt ? new Date(c.createdAt).toLocaleString('en-ZA', { dateStyle:'medium', timeStyle:'short' }) : '—';
+    const rowId = 'd-' + esc(c.confirmationId).replace(/[^a-z0-9]/gi,'_');
+    const marginBadge = c.markup ? `<span class="margin-badge on">Margin +${esc(String(c.markup))}%</span>` : `<span class="margin-badge off">No markup</span>`;
+    const details = [];
+    if (c.bookingRef) details.push({ l:'Booking Ref', v: esc(c.bookingRef) });
+    if (c.resort)     details.push({ l:'Resort', v: esc(c.resort) });
+    if ((c.passengers||[]).length) details.push({ l:'Passengers', v: c.passengers.map(esc).join(', ') });
+    if (c.total)      details.push({ l:'Total Package', v: esc(c.total) });
+    if (c.deposit)    details.push({ l:'Deposit', v: esc(c.deposit) + (c.depositDue ? ' (due ' + esc(c.depositDue) + ')' : '') });
+    if (c.balance)    details.push({ l:'Balance', v: esc(c.balance) + (c.balanceDue ? ' (due ' + esc(c.balanceDue) + ')' : '') });
+    if (c.markup && c.baseTotal) details.push({ l:'Supplier Total', v: esc(c.baseTotal) + ' → +' + esc(String(c.markup)) + '%' });
+    const detailHTML = `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:10px">Confirmation Details ${marginBadge}</div>
+      <div class="detail-grid">${details.map(d => `<div class="detail-item"><div class="detail-lbl">${d.l}</div><div class="detail-val">${d.v}</div></div>`).join('')}</div>`;
+    return `<tr>
+      <td class="td-name">${esc(c.clientName)}</td>
+      <td>${esc(c.destination)}</td>
+      <td class="td-date">${esc(c.dates) || '—'}</td>
+      <td class="td-total">${esc(c.total) || '—'}${c.markup ? `<span class="pill margin">+${esc(String(c.markup))}%</span>` : ''}</td>
+      <td class="td-date">${created}</td>
+      <td><div class="td-actions">
+        <span class="td-link"><a href="${esc(c.viewUrl)}" target="_blank">View ↗</a></span>
+        <button class="td-details-btn" onclick="toggle('${rowId}',this)">Details ▾</button>
+      </div></td>
+    </tr>
+    <tr class="detail-row" id="${rowId}"><td colspan="6">${detailHTML}</td></tr>`;
+  }).join('');
+}
+
+function toggle(rowId, btn) {
+  const row = document.getElementById(rowId); if (!row) return;
+  const open = row.classList.toggle('visible');
+  btn.textContent = open ? 'Details ▴' : 'Details ▾';
+}
+
+function exportCSV() {
+  if (!all.length) { alert('No confirmations to export.'); return; }
+  const cell = (v) => { const s = String(v == null ? '' : v).replace(/"/g, '""'); return /[,"\n\r]/.test(s) ? `"${s}"` : s; };
+  const headers = ['Client','Destination','Dates','Booking Ref','Resort','Total','Deposit','Deposit Due','Balance','Balance Due','Markup %','Created','View URL'];
+  const rows = all.map(c => [c.clientName, c.destination, c.dates, c.bookingRef, c.resort, c.total, c.deposit, c.depositDue, c.balance, c.balanceDue, c.markup || '', c.createdAt ? new Date(c.createdAt).toLocaleString('en-ZA') : '', c.viewUrl].map(cell).join(','));
+  const csv = [headers.join(','), ...rows].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = 'izitravel-confirmations-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>
