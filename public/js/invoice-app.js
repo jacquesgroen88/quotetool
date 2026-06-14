@@ -141,12 +141,12 @@
     state.logoBase64 = await loadLogo();
     $('f-invoiceNo').value = newInvNo();
     $('f-date').value = todayZA();
-    // banking defaults (fictitious — update to real details before going live)
+    // banking defaults (real Izi Travel & Tours account — confirmed 2026-06-14)
     $('b-accountName').value   = 'Izi Travel & Tours';
-    $('b-bank').value          = 'First National Bank';
+    $('b-bank').value          = 'Nedbank';
     $('b-accountType').value   = 'Cheque';
-    $('b-accountNumber').value = '6253 1198 447';
-    $('b-branchCode').value    = '250655';
+    $('b-accountNumber').value = '114 502 1808';
+    $('b-branchCode').value    = '198765';
     addLine('', '');
     $('addLine').addEventListener('click', () => addLine('', ''));
     $('genBtn').addEventListener('click', generate);
