@@ -190,7 +190,20 @@ Rules (CRITICAL — follow exactly to keep the response fast and complete):
 - addedValue: max 3 short items, or omit
 - If multiple room types for same resort, create separate options
 - FLIGHTS (important): If the same flight schedule repeats under each option, the flights are SHARED — extract the complete schedule into the top-level "flightDetails" field and set every option's flightDetails to "See flight details below". Never leave the top-level flightDetails empty when options say "See flight details below".
-- PRICING: Use the TOTAL price per person that INCLUDES airport tax/levies (the "Total" column, not the "excl VAT" base rate). totalPrice = the gross total for all pax. Prices may appear as "R 45,000", "R45000", "ZAR 45,000", in tables.
+- PRICING — read the figures carefully; supplier layouts vary and this is the #1 source of errors:
+  • pricePerPerson = the price for ONE adult INCLUDING airport taxes/levies.
+  • totalPrice = the final all-in price for ALL travellers, INCLUDING taxes.
+  • These MUST reconcile: pricePerPerson × number_of_pax = totalPrice (within rounding). If they do not, you have read the wrong line — re-read the figures.
+  • Many quotes show a per-option summary block such as:
+        Price per person R 16 194.00   Airport taxes R 7 114.00   x 2 Adult
+        Total            R 32 388.00     <- per-person base × pax, EXCLUDES tax — this is NOT a per-person price
+        Airport Taxes    R 14 228.00
+        Total Package    R 46 616.00     <- the FINAL all-in total — THIS is totalPrice
+    For that layout: totalPrice = "Total Package" (46 616). pricePerPerson = "Price per person" + "Airport taxes" (16 194 + 7 114 = 23 308) = Total Package ÷ pax.
+  • A line labelled just "Total" (WITHOUT the word "Package") is usually the multi-pax subtotal — NEVER copy it into pricePerPerson.
+  • Whenever a "Total Package" / final all-in total is printed, use it for totalPrice rather than calculating your own.
+  • If only a per-person price is given with no package total, set totalPrice = pricePerPerson × pax.
+  • Prices may appear as "R 45,000", "R45000", "R 16 194.00", "ZAR 45,000".
 - Do NOT mention supplier names (AFS, Afristay, Tourvest, Thompsons, Club Travel etc)
 - Strip booking reference codes and internal identifiers
 - resortName: resort/hotel name and star rating only

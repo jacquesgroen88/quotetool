@@ -563,15 +563,23 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 
     const esc = (s) => String(s == null ? '' : s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    // Anchor on the TOTAL (the figure the client pays) + internal arithmetic.
+    // We don't flag a per-person that's merely "not printed verbatim" — an all-in
+    // per-person is often base + tax, a legitimately computed value.
     const problems = [];
     checked.forEach((o, i) => {
-      const n = o.optionNumber || (i + 1);
-      const c = o._priceCheck;
-      const bits = [];
-      if (c.totalInSource === false && o.totalPrice)      bits.push('total ' + esc(o.totalPrice) + ' not in supplier doc');
-      if (c.ppInSource === false && o.pricePerPerson)     bits.push('per-person ' + esc(o.pricePerPerson) + ' not in supplier doc');
-      if (c.mathOk === false && bits.length === 0)        bits.push('per-person × pax ≠ total — check the figures');
-      if (bits.length) problems.push('Option ' + n + (o.resortName ? ' (' + esc(o.resortName) + ')' : '') + ': ' + bits.join('; '));
+      const n   = o.optionNumber || (i + 1);
+      const c   = o._priceCheck;
+      const who = 'Option ' + n + (o.resortName ? ' (' + esc(o.resortName) + ')' : '');
+      let msg = '';
+      if (c.totalInSource === false && c.mathOk === false) {
+        msg = 'total ' + esc(o.totalPrice) + " isn't in the supplier document, and per-person × pax doesn't add up to it — likely wrong";
+      } else if (c.mathOk === false) {
+        msg = "per-person × pax doesn't equal total " + esc(o.totalPrice) + ' — check the figures';
+      } else if (c.totalInSource === false) {
+        msg = 'total ' + esc(o.totalPrice) + " isn't printed in the supplier document (it equals per-person × pax) — confirm the per-person price is right";
+      }
+      if (msg) problems.push(who + ': ' + msg);
     });
 
     if (!problems.length) {
