@@ -88,7 +88,7 @@
       <a class="btn b-wa" id="i-wa" target="_blank" rel="noopener">📱 WhatsApp</a>
       <a class="btn b-em" id="i-em">✉ Email</a>`;
     $('i-copy').onclick = () => navigator.clipboard.writeText(url).then(() => { $('i-copy').textContent = '✓'; setTimeout(() => $('i-copy').textContent = 'Copy', 1500); });
-    $('i-dl').onclick = (e) => { e.preventDefault(); const blob = new Blob([buildInvoiceHTML(data, state.logoBase64)], { type: 'text/html' }); const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = buildInvoiceFilename(data); document.body.appendChild(a); a.click(); a.remove(); };
+    $('i-dl').onclick = (e) => { e.preventDefault(); window.IziPDF.download(buildInvoiceHTML(data, state.logoBase64), buildInvoiceFilename(data)); };
     $('i-wa').href = waHref; $('i-wa').onclick = (e) => { e.preventDefault(); onSend(waHref, data); };
     $('i-em').href = mailHref; $('i-em').onclick = (e) => { e.preventDefault(); onSend(mailHref, data); };
   }

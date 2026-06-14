@@ -37,12 +37,7 @@ const ConfApp = (() => {
   function downloadConfirmation() {
     if (!state.confirmationData) return;
     const html = buildConfirmationHTML(state.confirmationData, state.logoBase64);
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = buildConfirmationFilename(state.confirmationData);
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    window.IziPDF.download(html, buildConfirmationFilename(state.confirmationData));
   }
 
   // ── Markup — relative to supplier base, applied to all 4 money fields ──
@@ -96,6 +91,32 @@ const ConfApp = (() => {
       try { json = await res.json(); } catch { throw new Error(`Server error ${res.status} — the request may have timed out.`); }
       if (!res.ok || json.error) throw new Error(json.error || `Server error: ${res.status}`);
       state.confirmationData = json.result;
+
+      // ── Telephone handling ──────────────────────────────────────────────
+      // Prefer a GHL-prefilled phone, then the manual field, then anything the
+      // AI extracted from the supplier doc. If none, confirm before proceeding.
+      const manualPhone = (($('f-phone') || {}).value || '').trim();
+      if (manualPhone) state.clientPhone = manualPhone;
+      const cd = state.confirmationData;
+      const extractedPhone = cd.clientPhone || cd.phone || cd.contactPhone ||
+        ((cd.passengers || []).map(p => p && p.phone).find(Boolean));
+      if (!state.clientPhone && extractedPhone) state.clientPhone = extractedPhone;
+      if (!state.clientPhone) {
+        const proceed = confirm(
+          'No telephone number was detected on the supplier confirmation or entered.\n\n' +
+          'Generate the booking confirmation without a phone number?\n\n' +
+          'Without it, "Send via WhatsApp" and later automations (payment reminders, ' +
+          'post-trip review requests) won’t work for this client.');
+        if (!proceed) {
+          showView('view-upload');
+          const pf = $('f-phone');
+          if (pf) { pf.focus(); pf.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+          return;
+        }
+      }
+      // Persist the resolved phone onto the record so it shows + saves.
+      if (state.clientPhone) cd.clientPhone = state.clientPhone;
+
       refreshPreview();
       renderIntegrity(state.confirmationData);
       showView('view-editor');
@@ -268,7 +289,7 @@ const ConfApp = (() => {
       state = { file: null, confirmationData: null, logoBase64: state.logoBase64, currentBlobUrl: null, confirmationId: null, confirmationUrl: null };
       const zone = $('drop-zone');
       if (zone) zone.innerHTML = '<div class="drop-icon">&#128196;</div><div class="drop-main">Drop supplier confirmation here</div><div class="drop-sub">PDF or DOCX &mdash; up to 8 MB</div><div class="drop-btn">Browse Files</div>';
-      ['f-clientName', 'f-destination', 'f-tripType'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+      ['f-clientName', 'f-destination', 'f-tripType', 'f-phone'].forEach(id => { const el = $(id); if (el) el.value = ''; });
       $('detect-status').textContent = '';
       const wa = $('wa-btn-section'); if (wa) wa.style.display = 'none';
       showView('view-upload');

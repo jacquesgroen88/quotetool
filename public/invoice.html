@@ -12,7 +12,7 @@ body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-
 .app-header{background:#fff;border-bottom:1px solid var(--g200);position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 .app-header-inner{max-width:1200px;margin:0 auto;padding:0 28px;height:70px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .app-logo img{height:48px}.app-title{font-size:14px;font-weight:600;color:var(--g500)}.app-title span{color:var(--pink);font-weight:700}
-.nav{display:flex;gap:8px}.nav a{font-size:12px;color:var(--g500);text-decoration:none;font-weight:700;padding:8px 14px;border:1.5px solid var(--g200);border-radius:999px}.nav a:hover{border-color:var(--pink);color:var(--pink)}.nav a.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+.izinav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.izinav a{font-size:12px;color:#6b7280;text-decoration:none;font-weight:700;padding:8px 14px;border:1.5px solid #e5e7eb;border-radius:999px;white-space:nowrap;transition:border-color .15s,color .15s,background .15s}.izinav a:hover{border-color:#e63946;color:#e63946}.izinav a.on{background:#e63946;color:#fff;border-color:#e63946}.izinav a.right{margin-left:auto}
 .main{max-width:1200px;margin:0 auto;padding:28px;display:grid;grid-template-columns:380px 1fr;gap:24px;align-items:start}
 .card{background:#fff;border:1px solid var(--g200);border-radius:var(--radius);box-shadow:var(--shadow)}
 .fcard{padding:22px}
@@ -46,9 +46,14 @@ body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-
   <div class="app-header-inner">
     <a class="app-logo" href="/invoice.html"><img src="/assets/izilogo.jpg" alt="IziTravel"/></a>
     <div class="app-title">Invoice Generator &nbsp;<span>Internal Tool</span></div>
-    <div class="nav">
-      <a href="/leads.html">Leads</a><a href="/">Quotes</a><a href="/confirmation.html">Confirmations</a><a href="/invoice.html" class="on">Invoices</a>
-    </div>
+    <nav class="izinav">
+      <a href="/leads.html">Leads</a>
+      <a href="/">Quotes</a>
+      <a href="/confirmation.html">Confirmations</a>
+      <a href="/invoice.html" class="on">Invoices</a>
+      <a href="/admin.html" class="right">Admin</a>
+      <a href="https://app.reviewtap.co.za/v2/location/LrnHCFtZlP8Kxex8fUpv/opportunities/list" target="_blank" rel="noopener">Pipeline ↗</a>
+    </nav>
   </div>
 </header>
 
@@ -106,6 +111,7 @@ body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-
   </div>
 </main>
 
+<script src="/js/pdf-download.js"></script>
 <script src="/js/invoice-template.js"></script>
 <script src="/js/invoice-app.js"></script>
 </body>
