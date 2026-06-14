@@ -161,6 +161,17 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 .markup-btn:hover{background:var(--pink-dark)}
 .markup-hint{font-size:11.5px;color:var(--gray-400);margin-top:8px;line-height:1.5}
 
+/* Supplier price-check card */
+.integrity-card{border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border:1px solid var(--gray-200);background:#fff}
+.integrity-card.ok{border-color:#bbf7d0;background:var(--green-light)}
+.integrity-card.warn{border-color:#fcd34d;background:#fffbeb}
+.integrity-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;color:var(--gray-500)}
+.integrity-line{font-size:12.5px;line-height:1.5;display:flex;gap:7px;align-items:flex-start}
+.integrity-line+.integrity-line{margin-top:6px}
+.integrity-ok-text{color:#166534;font-weight:600}
+.integrity-warn-text{color:#92400e;font-weight:600}
+.integrity-sub{font-size:11px;color:var(--gray-400);margin-top:9px;line-height:1.5}
+
 /* ── Responsive ── */
 @media(max-width:900px){
   .editor-layout{grid-template-columns:1fr;height:auto}
@@ -420,6 +431,13 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
           </div>
         </div>
 
+        <!-- Supplier price check -->
+        <div class="integrity-card" id="integrity-card" style="display:none">
+          <div class="integrity-label">&#128274; Supplier Price Check</div>
+          <div id="integrity-body"></div>
+          <p class="integrity-sub">Checked against the supplier document when the quote was imported. Prices are never changed automatically.</p>
+        </div>
+
         <!-- Price Markup tool -->
         <div class="markup-card">
           <div class="markup-label">&#128181; Price Markup</div>
@@ -501,7 +519,46 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
     document.getElementById('qi-meta').textContent =
       [qd.dates, qd.adults ? qd.adults + ' adults' : '', qd.occasion]
         .filter(Boolean).join(' · ');
+    renderIntegrity(qd);
   });
+
+  // Render the supplier price-check card from the advisory _priceCheck flags
+  // attached server-side. Flags an option if a price isn't found verbatim in the
+  // supplier document OR if per-person × pax doesn't equal the total.
+  function renderIntegrity(qd) {
+    const card = document.getElementById('integrity-card');
+    const body = document.getElementById('integrity-body');
+    if (!card || !body) return;
+    const opts    = (qd && Array.isArray(qd.options)) ? qd.options : [];
+    const checked = opts.filter(o => o && o._priceCheck);
+    if (!checked.length) { card.style.display = 'none'; return; }  // older quote / no data
+
+    const esc = (s) => String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const problems = [];
+    checked.forEach((o, i) => {
+      const n = o.optionNumber || (i + 1);
+      const c = o._priceCheck;
+      const bits = [];
+      if (c.totalInSource === false && o.totalPrice)      bits.push('total ' + esc(o.totalPrice) + ' not in supplier doc');
+      if (c.ppInSource === false && o.pricePerPerson)     bits.push('per-person ' + esc(o.pricePerPerson) + ' not in supplier doc');
+      if (c.mathOk === false && bits.length === 0)        bits.push('per-person × pax ≠ total — check the figures');
+      if (bits.length) problems.push('Option ' + n + (o.resortName ? ' (' + esc(o.resortName) + ')' : '') + ': ' + bits.join('; '));
+    });
+
+    if (!problems.length) {
+      card.className = 'integrity-card ok';
+      body.innerHTML = '<div class="integrity-line"><span>&#9989;</span>'
+        + '<span class="integrity-ok-text">All ' + checked.length + ' option price'
+        + (checked.length > 1 ? 's' : '') + ' match the supplier document.</span></div>';
+    } else {
+      card.className = 'integrity-card warn';
+      body.innerHTML = problems.map(p =>
+        '<div class="integrity-line"><span>&#9888;&#65039;</span>'
+        + '<span class="integrity-warn-text">' + p + '</span></div>').join('');
+    }
+    card.style.display = 'block';
+  }
 </script>
 
 </body>

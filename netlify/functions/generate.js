@@ -42,6 +42,52 @@ function repairJSON(str) {
   return null;
 }
 
+// ── Price integrity check ───────────────────────────────────────────────────
+// Verifies every AI-extracted price actually appears in the supplier document,
+// so a transcription slip (e.g. R77,444 → R76,444) is caught, not shipped to a
+// client. Purely advisory: it ANNOTATES the data, never blocks generation and
+// never alters a price. Wrapped so any failure leaves the quote untouched.
+function annotatePriceIntegrity(rawText, qd) {
+  try {
+    if (!qd || !Array.isArray(qd.options)) return;
+
+    const toRand = (v) => {
+      const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, ''));
+      return isNaN(n) ? null : Math.round(n);
+    };
+
+    // Every currency figure in the supplier text, as integer rand.
+    // Require R/ZAR NOT preceded by a letter so flight codes (QR1364, EK766)
+    // and similar are never mistaken for prices.
+    const source = new Set();
+    const re = /(?:^|[^A-Za-z])(?:R|ZAR)\s*([0-9][0-9\s.,]*[0-9]|[0-9])/gi;
+    let m;
+    while ((m = re.exec(rawText)) !== null) {
+      const r = toRand(m[1]);
+      if (r != null && r >= 100) source.add(r);
+    }
+    qd._sourcePrices = Array.from(source).sort((a, b) => a - b);
+
+    const pax = parseInt(qd.adults, 10) || 2;
+    qd.options.forEach((opt) => {
+      const pp     = toRand(opt.pricePerPerson);
+      const total  = toRand(opt.totalPrice);
+      const optPax = parseInt(opt.totalPax, 10) || pax;
+      const ppInSource    = pp    != null && source.has(pp);
+      const totalInSource = total != null && source.has(total);
+      const mathOk = (pp != null && total != null)
+        ? Math.abs(pp * optPax - total) <= optPax   // tolerate cent rounding
+        : null;
+      opt._priceCheck = {
+        ppInSource,
+        totalInSource,
+        mathOk,
+        verified: ppInSource && totalInSource,       // both prices found verbatim
+      };
+    });
+  } catch (_) { /* advisory only — never break generation */ }
+}
+
 // Use https module — avoids Node 18 native fetch (undici) reliability issues
 function callOpenRouter(apiKey, payload) {
   return new Promise((resolve, reject) => {
@@ -240,6 +286,9 @@ ${rawText}`;
     if (cd.dates)       quoteData.dates       = cd.dates;
     if (cd.adults)      quoteData.adults      = cd.adults;
     if (cd.occasion)    quoteData.occasion    = cd.occasion;
+
+    // Verify extracted prices against the supplier document (advisory, never blocks).
+    annotatePriceIntegrity(rawText, quoteData);
 
     return {
       statusCode: 200,
