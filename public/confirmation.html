@@ -15,8 +15,11 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 .app-logo img{height:52px;width:auto;display:block}
 .app-title{font-size:14px;font-weight:600;color:var(--gray-500)}
 .app-title span{color:var(--pink);font-weight:700}
-.nav-link{font-size:13px;color:var(--gray-500);text-decoration:none;font-weight:600;padding:8px 14px;border:1.5px solid var(--gray-200);border-radius:999px}
-.nav-link:hover{border-color:var(--pink);color:var(--pink)}
+.izinav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.izinav a{font-size:12px;color:#6b7280;text-decoration:none;font-weight:700;padding:8px 14px;border:1.5px solid #e5e7eb;border-radius:999px;white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
+.izinav a:hover{border-color:#e63946;color:#e63946}
+.izinav a.on{background:#e63946;color:#fff;border-color:#e63946}
+.izinav a.right{margin-left:auto}
 .app-main{max-width:1400px;margin:0 auto;padding:40px 32px}
 .upload-layout{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;max-width:960px;margin:0 auto}
 .upload-col-head{margin-bottom:24px}
@@ -91,13 +94,14 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
   <div class="app-header-inner">
     <a class="app-logo" href="/confirmation.html"><img src="/assets/izilogo.jpg" alt="IziTravel"/></a>
     <div class="app-title">Confirmation Generator &nbsp;<span>Internal Tool</span></div>
-    <div style="display:flex;gap:8px">
-      <a class="nav-link" href="/leads.html">📋 Leads</a>
-      <a class="nav-link" href="/">↩ Quotes</a>
-      <a class="nav-link" href="/invoice.html">🧾 Invoices</a>
-      <a class="nav-link" href="https://app.reviewtap.co.za/v2/location/LrnHCFtZlP8Kxex8fUpv/opportunities/list" target="_blank" rel="noopener">📊 Pipeline ↗</a>
-      <a class="nav-link" href="/confirmations-admin.html">All Confirmations</a>
-    </div>
+    <nav class="izinav">
+      <a href="/leads.html">Leads</a>
+      <a href="/">Quotes</a>
+      <a href="/confirmation.html" class="on">Confirmations</a>
+      <a href="/invoice.html">Invoices</a>
+      <a href="/admin.html" class="right">Admin</a>
+      <a href="https://app.reviewtap.co.za/v2/location/LrnHCFtZlP8Kxex8fUpv/opportunities/list" target="_blank" rel="noopener">Pipeline ↗</a>
+    </nav>
   </div>
 </header>
 
@@ -127,6 +131,7 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
             <div class="form-group"><label>Client name / surname</label><input type="text" id="f-clientName" placeholder="e.g. Pohl &amp; Du Toit"/></div>
             <div class="form-group"><label>Destination</label><input type="text" id="f-destination" placeholder="e.g. Maldives"/></div>
             <div class="form-group"><label>Trip type</label><input type="text" id="f-tripType" placeholder="e.g. Honeymoon, Family"/></div>
+            <div class="form-group"><label>Client phone</label><input type="tel" id="f-phone" placeholder="e.g. 082 123 4567"/><span style="display:block;font-size:11.5px;color:var(--gray-400);margin-top:5px;text-transform:none;letter-spacing:0;font-weight:400">Used for WhatsApp send &amp; later automations. Leave blank only if the supplier doc already shows it.</span></div>
             <button id="generate-btn" class="generate-btn">&#10024; Generate Branded Confirmation</button>
           </div>
         </div>
@@ -191,6 +196,7 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
   </div>
 </main>
 
+<script src="/js/pdf-download.js"></script>
 <script src="/js/confirmation-template.js"></script>
 <script src="/js/confirmation-app.js"></script>
 <script>
