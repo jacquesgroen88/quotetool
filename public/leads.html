@@ -85,7 +85,7 @@ body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-
     <button class="tab" id="tab-quoted" data-group="quoted">Quoted</button>
   </div>
   <div id="content">
-    <div class="state"><div class="spin"></div>Loading leads from GHL…</div>
+    <div class="state"><div class="spin"></div>Loading leads from your CRM…</div>
   </div>
 </main>
 
@@ -140,13 +140,13 @@ function btnsHtml(l){
 }
 
 async function load(){
-  $('content').innerHTML='<div class="state"><div class="spin"></div>Loading leads from GHL…</div>';
+  $('content').innerHTML='<div class="state"><div class="spin"></div>Loading leads from your CRM…</div>';
   try{
     const res=await fetch('/.netlify/functions/list-leads');
     const data=await res.json();
     if(data.ghl==='disabled'){
-      $('subhead').textContent='GHL not connected yet';
-      $('content').innerHTML='<div class="banner">⚙️ Add <b>GHL_PIT_KEY</b> in Netlify environment variables (and redeploy) to pull live leads from your pipeline. See GHL-SETUP-CHECKLIST.md.</div><div class="state"><h3>No live data yet</h3>Once the key is set, your New Enquiry leads appear here automatically.</div>';
+      $('subhead').textContent='CRM not connected yet';
+      $('content').innerHTML='<div class="banner">⚙️ Add the CRM key <b>GHL_PIT_KEY</b> in Netlify environment variables (and redeploy) to pull live leads from your pipeline. See GHL-SETUP-CHECKLIST.md.</div><div class="state"><h3>No live data yet</h3>Once the key is set, your New Enquiry leads appear here automatically.</div>';
       return;
     }
     allLeads=data.leads||[];

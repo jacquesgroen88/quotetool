@@ -72,15 +72,7 @@ const App = (() => {
   function downloadQuote() {
     if (!state.quoteData) return;
     const html = buildQuoteHTML(state.quoteData, state.logoBase64);
-    const blob = new Blob([html], { type: 'text/html' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = buildFilename(state.quoteData);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    window.IziPDF.download(html, buildFilename(state.quoteData));
   }
 
   // ── Undo history ──────────────────────────────────────────────────────────
@@ -173,7 +165,7 @@ const App = (() => {
       set('f-email', p.email);
       if (p.adults) { const el = $('f-adults'); if (el && [...el.options].some(o => o.value === p.adults)) el.value = p.adults; }
       const ds = $('detect-status');
-      if (ds) { ds.textContent = '✓ Lead loaded from GHL — upload the supplier doc and generate.'; ds.className = 'detect-status success'; }
+      if (ds) { ds.textContent = '✓ Lead loaded from your CRM — upload the supplier doc and generate.'; ds.className = 'detect-status success'; }
     } catch { /* prefill is best-effort */ }
   }
 
@@ -348,10 +340,12 @@ const App = (() => {
     return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
   }
   function onSend(openHref) {
-    // confirm() is synchronous, so window.open stays within the click gesture
-    const doMark = !!state.leadContactId &&
-      confirm('Mark this quote as “Sent” in GHL?\nMoves the lead to Quote Sent and sets the deal value to the average option price.');
+    // Open the channel FIRST, synchronously inside the click gesture — opening
+    // after confirm() gets popup-blocked (the dialog consumes the gesture), which
+    // is why WhatsApp/email never opened even though the CRM move fired.
     window.open(openHref, '_blank');
+    const doMark = !!state.leadContactId &&
+      confirm('Mark this quote as “Sent” in CRM?\nMoves the lead to Quote Sent and sets the deal value to the average option price.');
     if (doMark) {
       fetch('/.netlify/functions/mark-quote-sent', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

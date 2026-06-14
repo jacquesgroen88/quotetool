@@ -38,6 +38,7 @@ exports.handler = async (event) => {
         const p  = cd.pricing || {};
         return {
           confirmationId: key,
+          contactId:   record.contactId   || '',
           clientName:  record.clientName  || cd.clientName  || 'Unknown',
           destination: record.destination || cd.destination || 'Unknown',
           dates:       record.dates       || '',

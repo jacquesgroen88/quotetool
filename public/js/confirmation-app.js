@@ -97,6 +97,8 @@ const ConfApp = (() => {
       // AI extracted from the supplier doc. If none, confirm before proceeding.
       const manualPhone = (($('f-phone') || {}).value || '').trim();
       if (manualPhone) state.clientPhone = manualPhone;
+      const manualEmail = (($('f-email') || {}).value || '').trim();
+      if (manualEmail) state.clientEmail = manualEmail;
       const cd = state.confirmationData;
       const extractedPhone = cd.clientPhone || cd.phone || cd.contactPhone ||
         ((cd.passengers || []).map(p => p && p.phone).find(Boolean));
@@ -261,9 +263,11 @@ const ConfApp = (() => {
     return isNaN(n) ? null : Math.round(n);
   }
   function onSend(openHref) {
-    const doMark = !!state.leadContactId &&
-      confirm('Mark this booking confirmation as “Sent” in GHL?\nMoves the deal to Booking Confirmation Sent.');
+    // Open FIRST, inside the click gesture — opening after confirm() gets
+    // popup-blocked, which is why the channel never opened.
     window.open(openHref, '_blank');
+    const doMark = !!state.leadContactId &&
+      confirm('Mark this booking confirmation as “Sent” in CRM?\nMoves the deal to Booking Confirmation Sent and updates the deal value to this amount.');
     if (doMark) {
       fetch('/.netlify/functions/mark-confirmation-sent', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -277,10 +281,33 @@ const ConfApp = (() => {
     }
   }
 
+  // Prefill from explicit query params (used by "Create confirmation" in the
+  // quotes admin — the client details are already known from the quote).
+  function prefillFromParams(params) {
+    const set = (id, v) => { const el = $(id); if (el && v) el.value = v; };
+    const name = params.get('name') || '';
+    const dest = params.get('dest') || '';
+    const email = params.get('email') || '';
+    const phone = params.get('phone') || '';
+    set('f-clientName', name);
+    set('f-destination', dest);
+    set('f-email', email);
+    set('f-phone', phone);
+    set('f-tripType', params.get('trip') || '');
+    if (email) state.clientEmail = email;
+    if (phone) state.clientPhone = phone;
+    const ds = $('detect-status');
+    if (ds && (name || dest)) { ds.textContent = '✓ Prefilled from the quote — upload the supplier confirmation, then Generate.'; ds.className = 'detect-status success'; }
+  }
+
   async function init() {
     state.logoBase64 = await loadLogo();
-    const cid = new URLSearchParams(location.search).get('cid');
-    if (cid) prefillFromLead(cid);
+    const params = new URLSearchParams(location.search);
+    const cid = params.get('cid');
+    const hasExplicit = params.get('name') || params.get('email') || params.get('phone') || params.get('dest');
+    if (cid) state.leadContactId = cid;       // keeps stage moves working on send
+    if (hasExplicit) prefillFromParams(params); // quotes-admin path — details known
+    else if (cid)    prefillFromLead(cid);      // leads-board path — fetch from CRM
     initDropZone();
     $('generate-btn') && $('generate-btn').addEventListener('click', runGenerate);
     $('download-btn') && $('download-btn').addEventListener('click', downloadConfirmation);
@@ -289,7 +316,7 @@ const ConfApp = (() => {
       state = { file: null, confirmationData: null, logoBase64: state.logoBase64, currentBlobUrl: null, confirmationId: null, confirmationUrl: null };
       const zone = $('drop-zone');
       if (zone) zone.innerHTML = '<div class="drop-icon">&#128196;</div><div class="drop-main">Drop supplier confirmation here</div><div class="drop-sub">PDF or DOCX &mdash; up to 8 MB</div><div class="drop-btn">Browse Files</div>';
-      ['f-clientName', 'f-destination', 'f-tripType', 'f-phone'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+      ['f-clientName', 'f-destination', 'f-tripType', 'f-phone', 'f-email'].forEach(id => { const el = $(id); if (el) el.value = ''; });
       $('detect-status').textContent = '';
       const wa = $('wa-btn-section'); if (wa) wa.style.display = 'none';
       showView('view-upload');
