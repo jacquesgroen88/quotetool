@@ -189,6 +189,11 @@ function contactCell(phone,email){
 }
 function viewAct(url){ return url ? `<a class="act act-primary" href="${esc(url)}" target="_blank">View ↗</a>` : ''; }
 function copyAct(url){ return url ? `<button class="act act-ghost" onclick="copyLink('${esc(url)}',this)">Copy</button>` : ''; }
+// Create a confirmation from a quote — prefills the override fields; cid carries
+// the CRM contact so sending moves the deal to Booking Confirmation Sent.
+function confLink(q){ const p=new URLSearchParams(); if(q.clientName)p.set('name',q.clientName); if(q.destination)p.set('dest',q.destination); if(q.email)p.set('email',q.email); if(q.phone)p.set('phone',q.phone); if(q.contactId)p.set('cid',q.contactId); return '/confirmation.html?'+p.toString(); }
+// Create an invoice from a confirmation — from= prefills it; cid carries the CRM contact.
+function invLink(c){ const p=new URLSearchParams(); if(c.confirmationId)p.set('from',c.confirmationId); if(c.contactId)p.set('cid',c.contactId); return '/invoice.html?'+p.toString(); }
 
 // ── Per-tab configuration ──────────────────────────────────────────────────
 const TABS = {
@@ -208,7 +213,7 @@ const TABS = {
       <td><span class="pill">${q.optionCount||0} option${q.optionCount!==1?'s':''}</span>${(q.markup&&q.markup.pct)?`<span class="pill margin">+${esc(String(q.markup.pct))}%</span>`:''}</td>
       <td>${contactCell(q.phone,q.email)}</td>
       <td class="td-date">${fmtDate(q.createdAt)}</td>
-      <td><div class="td-actions">${viewAct(q.quoteUrl)}<a class="act act-ghost" href="/?edit=${esc(q.quoteId)}" target="_blank">Edit ✏</a>${copyAct(q.quoteUrl)}</div></td>`,
+      <td><div class="td-actions">${viewAct(q.quoteUrl)}<a class="act act-ghost" href="/?edit=${esc(q.quoteId)}" target="_blank">Edit ✏</a><a class="act act-ghost" href="${confLink(q)}" target="_blank" title="Create a branded booking confirmation prefilled with this client">Confirm →</a>${copyAct(q.quoteUrl)}</div></td>`,
     csv: { headers:['Client','Destination','Options','Markup %','Phone','Email','Created','URL'],
       row:q=>[q.clientName,q.destination,q.optionCount,(q.markup&&q.markup.pct)||'',q.phone,q.email,q.createdAt?new Date(q.createdAt).toLocaleString('en-ZA'):'',q.quoteUrl] },
   },
@@ -229,7 +234,7 @@ const TABS = {
       <td class="td-money">${esc(c.total)||'—'}${c.markup?`<span class="pill margin">+${esc(String(c.markup))}%</span>`:''}</td>
       <td>${c.paxCount?`<span class="pill">${esc(String(c.paxCount))}</span>`:'—'}</td>
       <td class="td-date">${fmtDate(c.createdAt)}</td>
-      <td><div class="td-actions">${viewAct(c.viewUrl)}${copyAct(c.viewUrl)}</div></td>`,
+      <td><div class="td-actions">${viewAct(c.viewUrl)}<a class="act act-ghost" href="${invLink(c)}" target="_blank" title="Create a tax invoice prefilled from this confirmation">Invoice →</a>${copyAct(c.viewUrl)}</div></td>`,
     csv: { headers:['Client','Destination','Resort','Total','Deposit','Balance','Pax','Created','URL'],
       row:c=>[c.clientName,c.destination,c.resort,c.total,c.deposit,c.balance,c.paxCount,c.createdAt?new Date(c.createdAt).toLocaleString('en-ZA'):'',c.viewUrl] },
   },
@@ -256,7 +261,7 @@ const TABS = {
   },
   leads: {
     label: 'Leads', idField: 'contactId', nameField: 'name',
-    title: 'Open Leads', sub: 'Live from the GHL pipeline — leads still to quote',
+    title: 'Open Leads', sub: 'Live from the CRM pipeline — leads still to quote',
     searchText: l => `${l.name||''} ${l.destination||''} ${l.stage||''}`,
     stats: rows => [
       ['Open leads', rows.length],
@@ -270,7 +275,7 @@ const TABS = {
       <td class="td-date">${esc(l.dates)||'—'}${l.pax?` · ${esc(l.pax)} pax`:''}</td>
       <td><span class="pill stage">${esc(l.stage)||'—'}</span></td>
       <td>${contactCell(l.phone,l.email)}</td>
-      <td><div class="td-actions"><a class="act act-primary" href="${esc(l.quoteUrl)}" target="_blank">Quote →</a>${l.ghlUrl?`<a class="act act-ghost" href="${esc(l.ghlUrl)}" target="_blank">GHL ↗</a>`:''}</div></td>`,
+      <td><div class="td-actions"><a class="act act-primary" href="${esc(l.quoteUrl)}" target="_blank">Quote →</a>${l.ghlUrl?`<a class="act act-ghost" href="${esc(l.ghlUrl)}" target="_blank">CRM ↗</a>`:''}</div></td>`,
     csv: { headers:['Lead','Destination','Travel','Stage','Phone','Email','Urgent','Created'],
       row:l=>[l.name,l.destination,l.dates,l.stage,l.phone,l.email,l.urgent?'Yes':'',l.createdAt?new Date(l.createdAt).toLocaleString('en-ZA'):''] },
   },
@@ -384,7 +389,7 @@ function render(){
   const cols  = cfg.head.length;
   if (!filtered.length) {
     const msg = rows.length===0
-      ? (activeTab==='leads' ? 'No open leads in the pipeline (or GHL not connected).' : `No ${cfg.label.toLowerCase()} yet.`)
+      ? (activeTab==='leads' ? 'No open leads in the pipeline (or CRM not connected).' : `No ${cfg.label.toLowerCase()} yet.`)
       : `No ${cfg.label.toLowerCase()} match your search.`;
     tbody.innerHTML = `<tr><td colspan="${cols}"><div class="empty-state"><p>${msg}</p></div></td></tr>`;
     return;

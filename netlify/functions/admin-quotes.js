@@ -65,6 +65,7 @@ exports.handler = async (event) => {
             })),
             phone:       record.phone       || '',
             email:       record.email       || '',
+            contactId:   record.contactId   || '',
             occasion:    record.occasion    || '',
             adults:      record.adults      || '',
             children:    record.children    || '',

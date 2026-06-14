@@ -60,15 +60,20 @@
   function normWa(phone) { let d = String(phone || '').replace(/[^0-9]/g, ''); if (!d) return ''; if (d.charAt(0) === '0') d = '27' + d.slice(1); return d; }
   function totalNum(data) { const n = parseFloat(String(data.total || '').replace(/[^0-9.]/g, '')); return isNaN(n) ? null : Math.round(n); }
 
+  function markInvoiced(data) {
+    if (!state.leadContactId) return;
+    fetch('/.netlify/functions/mark-invoiced', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactId: state.leadContactId, total: totalNum(data), invoiceUrl: state.invoiceUrl, name: [data.clientName, data.destination].filter(Boolean).join(' - ') }),
+    }).catch(() => {});
+  }
+
   function onSend(openHref, data) {
-    const doMark = !!state.leadContactId && confirm('Mark this invoice as “Sent” in GHL?\nMoves the deal to Invoiced.');
+    // Open FIRST, inside the click gesture — opening after confirm() gets
+    // popup-blocked, which is why the channel never opened.
     window.open(openHref, '_blank');
-    if (doMark) {
-      fetch('/.netlify/functions/mark-invoiced', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contactId: state.leadContactId, total: totalNum(data), invoiceUrl: state.invoiceUrl, name: [data.clientName, data.destination].filter(Boolean).join(' - ') }),
-      }).catch(() => {});
-    }
+    const doMark = !!state.leadContactId && confirm('Mark this invoice as “Sent” in CRM?\nMoves the deal to Invoiced.');
+    if (doMark) markInvoiced(data);
   }
 
   function renderLinks(url, data) {
@@ -106,6 +111,9 @@
       if (j.invoiceUrl) { state.invoiceUrl = j.invoiceUrl; state.invoiceId = j.invoiceId; renderLinks(j.invoiceUrl, data); }
       else renderLinks('(saving failed — use Download)', data);
     } catch { renderLinks('(saving failed — use Download)', data); }
+    // Generating an invoice for a CRM lead moves the deal to Invoiced (and sets
+    // its value), as well as the send action — per Jacques's request.
+    markInvoiced(data);
   }
 
   async function prefill() {
