@@ -3,21 +3,24 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Admin — IziTravel Quote Dashboard</title>
+<title>Admin — IziTravel Operations Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--pink:#e63946;--gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;--gray-400:#94a3b8;--gray-500:#64748b;--gray-700:#334155;--gray-900:#0f172a}
+:root{--pink:#e63946;--gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;--gray-400:#94a3b8;--gray-500:#64748b;--gray-700:#334155;--gray-900:#0f172a;--green:#16a34a}
 body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-900);min-height:100vh}
 
 /* Header */
-header{background:#fff;border-bottom:1px solid var(--gray-200);padding:0 32px;display:flex;align-items:center;height:64px;gap:16px}
+header{background:#fff;border-bottom:1px solid var(--gray-200);padding:0 32px;display:flex;align-items:center;height:64px;gap:16px;flex-wrap:wrap}
 header img{height:40px;width:auto}
 header h1{font-size:16px;font-weight:700;color:var(--gray-900)}
 header .badge{background:var(--pink);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase}
 header .spacer{flex:1}
-header a{font-size:13px;color:var(--gray-500);text-decoration:none;font-weight:500}header a:hover{color:var(--pink)}
+.izinav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.izinav a{font-size:12px;color:#6b7280;text-decoration:none;font-weight:700;padding:8px 14px;border:1.5px solid #e5e7eb;border-radius:999px;white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
+.izinav a:hover{border-color:#e63946;color:#e63946}
+.izinav a.on{background:#e63946;color:#fff;border-color:#e63946}
 
 /* Login */
 #loginView{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 64px);padding:24px}
@@ -34,19 +37,27 @@ header a{font-size:13px;color:var(--gray-500);text-decoration:none;font-weight:5
 
 /* Dashboard */
 #dashView{display:none;padding:32px}
-.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap}
 .dash-title h2{font-size:22px;font-weight:800;letter-spacing:-.02em}
 .dash-title p{font-size:13px;color:var(--gray-500);margin-top:3px}
 .dash-actions{display:flex;gap:8px;flex-wrap:wrap}
 .btn-secondary{background:#fff;border:1.5px solid var(--gray-200);color:var(--gray-700);padding:9px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s}
 .btn-secondary:hover{border-color:var(--pink);color:var(--pink)}
 .btn-export{background:#fff;border:1.5px solid var(--gray-200);color:var(--gray-700);padding:9px 18px;border-radius:9px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
-.btn-export:hover{border-color:#16a34a;color:#16a34a}
+.btn-export:hover{border-color:var(--green);color:var(--green)}
+
+/* Tabs */
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{background:#fff;border:1.5px solid var(--gray-200);color:var(--gray-500);font-size:13.5px;font-weight:700;font-family:inherit;padding:9px 18px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s}
+.tab:hover{border-color:var(--pink);color:var(--pink)}
+.tab.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+.tab .tab-count{font-size:11px;font-weight:800;background:var(--gray-100);color:var(--gray-700);padding:1px 8px;border-radius:999px;min-width:20px;text-align:center}
+.tab.on .tab-count{background:rgba(255,255,255,.25);color:#fff}
 
 /* Stats bar */
 .stats-bar{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
-.stat-card{background:#fff;border-radius:14px;padding:20px 24px;flex:1;min-width:140px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
-.stat-card .stat-num{font-size:28px;font-weight:800;color:var(--gray-900);letter-spacing:-.02em}
+.stat-card{background:#fff;border-radius:14px;padding:18px 24px;flex:1;min-width:130px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.stat-card .stat-num{font-size:26px;font-weight:800;color:var(--gray-900);letter-spacing:-.02em}
 .stat-card .stat-lbl{font-size:12px;color:var(--gray-400);font-weight:500;margin-top:2px}
 
 /* Filter bar */
@@ -58,9 +69,9 @@ header a{font-size:13px;color:var(--gray-500);text-decoration:none;font-weight:5
 .filter-count{font-size:12px;color:var(--gray-400);white-space:nowrap;margin-left:auto}
 
 /* Table */
-.table-wrap{background:#fff;border-radius:16px;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:hidden}
+.table-wrap{background:#fff;border-radius:16px;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:auto}
 table{width:100%;border-collapse:collapse}
-thead th{background:var(--gray-50);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-500);padding:13px 16px;text-align:left;border-bottom:1px solid var(--gray-200)}
+thead th{background:var(--gray-50);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-500);padding:13px 16px;text-align:left;border-bottom:1px solid var(--gray-200);white-space:nowrap}
 tbody tr{border-bottom:1px solid var(--gray-100);transition:background .1s}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:var(--gray-50)}
@@ -68,45 +79,18 @@ tbody td{padding:13px 16px;font-size:13.5px;color:var(--gray-700);vertical-align
 .td-name{font-weight:600;color:var(--gray-900)}
 .td-dest{display:flex;align-items:center;gap:6px}
 .td-dest .dest-dot{width:7px;height:7px;border-radius:50%;background:var(--pink);flex-shrink:0}
-.td-date{color:var(--gray-400);font-size:12px}
-.td-opts .pill{background:var(--gray-100);color:var(--gray-700);font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
-.td-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.td-link a{display:inline-flex;align-items:center;gap:5px;background:var(--pink);color:#fff;text-decoration:none;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;transition:background .15s}
-.td-link a:hover{background:#c0313d}
-.td-edit a{display:inline-flex;align-items:center;gap:4px;background:#fff;color:var(--gray-700);text-decoration:none;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid var(--gray-200);transition:all .15s}
-.td-edit a:hover{border-color:var(--pink);color:var(--pink)}
-.td-copy{cursor:pointer;color:var(--gray-400);background:none;border:none;font-size:12px;font-family:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--gray-200);transition:all .15s}
-.td-copy:hover{color:var(--pink);border-color:var(--pink)}
-.td-dup{cursor:pointer;color:var(--gray-400);background:none;border:none;font-size:12px;font-family:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--gray-200);transition:all .15s}
-.td-dup:hover{color:#7c3aed;border-color:#7c3aed}
-.td-details-btn{cursor:pointer;color:var(--gray-400);background:none;border:none;font-size:12px;font-family:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--gray-200);transition:all .15s;white-space:nowrap}
-.td-details-btn:hover{color:var(--gray-700);border-color:var(--gray-400)}
-.td-details-btn.open{color:var(--pink);border-color:var(--pink);background:var(--gray-50)}
-
-/* Detail expand row */
-.detail-row{display:none}
-.detail-row.visible{display:table-row}
-.detail-row td{background:var(--gray-50);padding:12px 16px 16px 32px;border-bottom:1px solid var(--gray-100)}
-.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-.detail-item .detail-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:3px}
-.detail-item .detail-val{font-size:13px;color:var(--gray-700);font-weight:500}
-.detail-item .detail-val a{color:var(--pink);text-decoration:none}
-.detail-item .detail-val a:hover{text-decoration:underline}
-.detail-empty{font-size:12px;color:var(--gray-400);font-style:italic}
-
-/* Options & margin in the detail row */
-.detail-section{margin-top:14px}
-.detail-section-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.margin-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;letter-spacing:.03em;text-transform:uppercase}
-.margin-badge.on{background:#dcfce7;color:#166534}
-.margin-badge.off{background:var(--gray-100);color:var(--gray-400)}
-.opts-list{display:flex;flex-direction:column;gap:6px}
-.opt-line{display:flex;justify-content:space-between;gap:14px;align-items:baseline;font-size:13px;padding:8px 11px;background:#fff;border:1px solid var(--gray-200);border-radius:8px}
-.opt-name{font-weight:600;color:var(--gray-900)}
-.opt-price{font-weight:700;color:var(--gray-900);white-space:nowrap;text-align:right}
-.opt-pp{font-weight:500;color:var(--gray-400);font-size:11.5px}
-.opt-base{display:block;font-weight:500;color:#16a34a;font-size:11px;margin-top:1px}
+.td-date{color:var(--gray-400);font-size:12px;white-space:nowrap}
+.td-money{font-weight:700;color:var(--gray-900);white-space:nowrap}
+.pill{background:var(--gray-100);color:var(--gray-700);font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
 .pill.margin{background:#dcfce7;color:#166534;margin-left:5px}
+.pill.stage{background:#dbeafe;color:#1e40af}
+.pill.urgent{background:var(--pink);color:#fff;margin-left:5px}
+.td-contact{font-size:12px;color:var(--gray-500);line-height:1.5}
+.td-contact a{color:var(--pink);text-decoration:none}
+.td-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.act{display:inline-flex;align-items:center;gap:5px;text-decoration:none;padding:6px 13px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid transparent;transition:all .15s;white-space:nowrap}
+.act-primary{background:var(--pink);color:#fff}.act-primary:hover{background:#c0313d}
+.act-ghost{background:#fff;color:var(--gray-700);border-color:var(--gray-200)}.act-ghost:hover{border-color:var(--pink);color:var(--pink)}
 
 .empty-state{text-align:center;padding:64px 32px}
 .empty-state p{color:var(--gray-400);font-size:14px}
@@ -117,18 +101,24 @@ tbody td{padding:13px 16px;font-size:13.5px;color:var(--gray-700);vertical-align
 
 <header>
   <img src="/assets/izilogo.jpg" alt="IziTravel"/>
-  <h1>Quote Dashboard</h1>
+  <h1>Operations Dashboard</h1>
   <span class="badge">Admin</span>
   <span class="spacer"></span>
-  <a href="/confirmations-admin.html">Confirmations →</a> &nbsp;
-  <a href="/">← Back to Generator</a>
+  <nav class="izinav">
+    <a href="/leads.html">Leads</a>
+    <a href="/">Quotes</a>
+    <a href="/confirmation.html">Confirmations</a>
+    <a href="/invoice.html">Invoices</a>
+    <a href="/admin.html" class="on">Admin</a>
+    <a href="https://app.reviewtap.co.za/v2/location/LrnHCFtZlP8Kxex8fUpv/opportunities/list" target="_blank" rel="noopener">Pipeline ↗</a>
+  </nav>
 </header>
 
 <!-- Login view -->
 <div id="loginView">
   <div class="login-card">
     <h2>Admin Access</h2>
-    <p>Enter your password to view all generated quotes.</p>
+    <p>Enter your password to view all quotes, confirmations, invoices and leads.</p>
     <form id="loginForm">
       <div class="field">
         <label>Password</label>
@@ -144,8 +134,8 @@ tbody td{padding:13px 16px;font-size:13.5px;color:var(--gray-700);vertical-align
 <div id="dashView">
   <div class="dash-header">
     <div class="dash-title">
-      <h2>All Quotes</h2>
-      <p>Every quote generated by IziTravel agents</p>
+      <h2 id="dashTitle">All Records</h2>
+      <p id="dashSub">Everything IziTravel agents generate, in one place</p>
     </div>
     <div class="dash-actions">
       <button class="btn-export" id="exportCsvBtn">&#11123; Export CSV</button>
@@ -153,15 +143,12 @@ tbody td{padding:13px 16px;font-size:13.5px;color:var(--gray-700);vertical-align
     </div>
   </div>
 
-  <div class="stats-bar" id="statsBar">
-    <div class="stat-card"><div class="stat-num" id="statTotal">—</div><div class="stat-lbl">Total Quotes</div></div>
-    <div class="stat-card"><div class="stat-num" id="statToday">—</div><div class="stat-lbl">Today</div></div>
-    <div class="stat-card"><div class="stat-num" id="statDests">—</div><div class="stat-lbl">Destinations</div></div>
-  </div>
+  <div class="tabs" id="tabBar"></div>
 
-  <!-- Filter bar -->
+  <div class="stats-bar" id="statsBar"></div>
+
   <div class="filter-bar">
-    <input id="searchInput" type="text" placeholder="&#128269; Search client or destination…"/>
+    <input id="searchInput" type="text" placeholder="&#128269; Search…"/>
     <select id="filterPeriod">
       <option value="">All time</option>
       <option value="today">Today</option>
@@ -171,25 +158,16 @@ tbody td{padding:13px 16px;font-size:13.5px;color:var(--gray-700);vertical-align
     <select id="sortOrder">
       <option value="newest">Newest first</option>
       <option value="oldest">Oldest first</option>
-      <option value="name">Client A–Z</option>
+      <option value="name">Name A–Z</option>
     </select>
     <span class="filter-count" id="filterCount"></span>
   </div>
 
   <div class="table-wrap">
     <table>
-      <thead>
-        <tr>
-          <th>Client</th>
-          <th>Destination</th>
-          <th>Dates</th>
-          <th>Options</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="quotesBody">
-        <tr class="loading-row"><td colspan="6">Loading quotes…</td></tr>
+      <thead><tr id="tableHead"></tr></thead>
+      <tbody id="tableBody">
+        <tr class="loading-row"><td>Loading…</td></tr>
       </tbody>
     </table>
   </div>
@@ -197,241 +175,242 @@ tbody td{padding:13px 16px;font-size:13.5px;color:var(--gray-700);vertical-align
 
 <script>
 let adminPassword = '';
-let allQuotes = [];
+let activeTab = 'quotes';
+const DATA = { quotes: [], confirmations: [], invoices: [], leads: [] };
 
+function esc(str){ return String(str==null?'':str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(d){ return d ? new Date(d).toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'}) : '—'; }
+function destCell(v){ return v ? `<div class="td-dest"><span class="dest-dot"></span>${esc(v)}</div>` : '—'; }
+function contactCell(phone,email){
+  const bits=[];
+  if(phone) bits.push(`<a href="tel:${esc(phone)}">${esc(phone)}</a>`);
+  if(email) bits.push(`<a href="mailto:${esc(email)}">${esc(email)}</a>`);
+  return bits.length ? `<div class="td-contact">${bits.join('<br>')}</div>` : '<span class="td-date">—</span>';
+}
+function viewAct(url){ return url ? `<a class="act act-primary" href="${esc(url)}" target="_blank">View ↗</a>` : ''; }
+function copyAct(url){ return url ? `<button class="act act-ghost" onclick="copyLink('${esc(url)}',this)">Copy</button>` : ''; }
+
+// ── Per-tab configuration ──────────────────────────────────────────────────
+const TABS = {
+  quotes: {
+    label: 'Quotes', idField: 'quoteId', nameField: 'clientName',
+    title: 'All Quotes', sub: 'Every quote generated by IziTravel agents',
+    searchText: q => `${q.clientName||''} ${q.destination||''}`,
+    stats: rows => [
+      ['Total', rows.length],
+      ['Today', rows.filter(isToday).length],
+      ['Destinations', new Set(rows.map(r=>r.destination).filter(Boolean)).size],
+    ],
+    head: ['Client','Destination','Options','Contact','Created','Actions'],
+    row: q => `
+      <td class="td-name">${esc(q.clientName)}</td>
+      <td>${destCell(q.destination)}</td>
+      <td><span class="pill">${q.optionCount||0} option${q.optionCount!==1?'s':''}</span>${(q.markup&&q.markup.pct)?`<span class="pill margin">+${esc(String(q.markup.pct))}%</span>`:''}</td>
+      <td>${contactCell(q.phone,q.email)}</td>
+      <td class="td-date">${fmtDate(q.createdAt)}</td>
+      <td><div class="td-actions">${viewAct(q.quoteUrl)}<a class="act act-ghost" href="/?edit=${esc(q.quoteId)}" target="_blank">Edit ✏</a>${copyAct(q.quoteUrl)}</div></td>`,
+    csv: { headers:['Client','Destination','Options','Markup %','Phone','Email','Created','URL'],
+      row:q=>[q.clientName,q.destination,q.optionCount,(q.markup&&q.markup.pct)||'',q.phone,q.email,q.createdAt?new Date(q.createdAt).toLocaleString('en-ZA'):'',q.quoteUrl] },
+  },
+  confirmations: {
+    label: 'Confirmations', idField: 'confirmationId', nameField: 'clientName',
+    title: 'All Confirmations', sub: 'Branded booking confirmations sent to clients',
+    searchText: c => `${c.clientName||''} ${c.destination||''} ${c.resort||''}`,
+    stats: rows => [
+      ['Total', rows.length],
+      ['Today', rows.filter(isToday).length],
+      ['Destinations', new Set(rows.map(r=>r.destination).filter(Boolean)).size],
+    ],
+    head: ['Client','Destination','Resort','Total','Pax','Created','Actions'],
+    row: c => `
+      <td class="td-name">${esc(c.clientName)}</td>
+      <td>${destCell(c.destination)}</td>
+      <td>${esc(c.resort)||'—'}</td>
+      <td class="td-money">${esc(c.total)||'—'}${c.markup?`<span class="pill margin">+${esc(String(c.markup))}%</span>`:''}</td>
+      <td>${c.paxCount?`<span class="pill">${esc(String(c.paxCount))}</span>`:'—'}</td>
+      <td class="td-date">${fmtDate(c.createdAt)}</td>
+      <td><div class="td-actions">${viewAct(c.viewUrl)}${copyAct(c.viewUrl)}</div></td>`,
+    csv: { headers:['Client','Destination','Resort','Total','Deposit','Balance','Pax','Created','URL'],
+      row:c=>[c.clientName,c.destination,c.resort,c.total,c.deposit,c.balance,c.paxCount,c.createdAt?new Date(c.createdAt).toLocaleString('en-ZA'):'',c.viewUrl] },
+  },
+  invoices: {
+    label: 'Invoices', idField: 'invoiceId', nameField: 'clientName',
+    title: 'All Invoices', sub: 'Tax invoices generated from confirmations',
+    searchText: i => `${i.clientName||''} ${i.invoiceNo||''} ${i.destination||''}`,
+    stats: rows => [
+      ['Total', rows.length],
+      ['Today', rows.filter(isToday).length],
+      ['Clients', new Set(rows.map(r=>r.clientName).filter(Boolean)).size],
+    ],
+    head: ['Client','Invoice No','Trip','Total','Due','Created','Actions'],
+    row: i => `
+      <td class="td-name">${esc(i.clientName)}</td>
+      <td><span class="pill">${esc(i.invoiceNo)||'—'}</span></td>
+      <td>${esc(i.destination)||'—'}</td>
+      <td class="td-money">${esc(i.total)||'—'}</td>
+      <td class="td-date">${esc(i.dueDate)||'—'}</td>
+      <td class="td-date">${fmtDate(i.createdAt)}</td>
+      <td><div class="td-actions">${viewAct(i.viewUrl)}${copyAct(i.viewUrl)}</div></td>`,
+    csv: { headers:['Client','Invoice No','Trip','Total','Deposit','Balance','Due','Created','URL'],
+      row:i=>[i.clientName,i.invoiceNo,i.destination,i.total,i.deposit,i.balance,i.dueDate,i.createdAt?new Date(i.createdAt).toLocaleString('en-ZA'):'',i.viewUrl] },
+  },
+  leads: {
+    label: 'Leads', idField: 'contactId', nameField: 'name',
+    title: 'Open Leads', sub: 'Live from the GHL pipeline — leads still to quote',
+    searchText: l => `${l.name||''} ${l.destination||''} ${l.stage||''}`,
+    stats: rows => [
+      ['Open leads', rows.length],
+      ['Urgent', rows.filter(r=>r.urgent).length],
+      ['To quote', rows.filter(r=>r.group==='to_quote').length],
+    ],
+    head: ['Lead','Destination','Travel','Stage','Contact','Actions'],
+    row: l => `
+      <td class="td-name">${esc(l.name)}${l.urgent?'<span class="pill urgent">Urgent</span>':''}</td>
+      <td>${destCell(l.destination)}</td>
+      <td class="td-date">${esc(l.dates)||'—'}${l.pax?` · ${esc(l.pax)} pax`:''}</td>
+      <td><span class="pill stage">${esc(l.stage)||'—'}</span></td>
+      <td>${contactCell(l.phone,l.email)}</td>
+      <td><div class="td-actions"><a class="act act-primary" href="${esc(l.quoteUrl)}" target="_blank">Quote →</a>${l.ghlUrl?`<a class="act act-ghost" href="${esc(l.ghlUrl)}" target="_blank">GHL ↗</a>`:''}</div></td>`,
+    csv: { headers:['Lead','Destination','Travel','Stage','Phone','Email','Urgent','Created'],
+      row:l=>[l.name,l.destination,l.dates,l.stage,l.phone,l.email,l.urgent?'Yes':'',l.createdAt?new Date(l.createdAt).toLocaleString('en-ZA'):''] },
+  },
+};
+
+function isToday(r){ return r.createdAt && new Date(r.createdAt).toDateString() === new Date().toDateString(); }
+
+// ── Auth + load ────────────────────────────────────────────────────────────
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const pass = document.getElementById('passwordInput').value.trim();
   if (!pass) return;
   adminPassword = pass;
-  await loadQuotes();
+  await loadAll(true);
 });
-
-document.getElementById('refreshBtn').addEventListener('click', () => loadQuotes());
+document.getElementById('refreshBtn').addEventListener('click', () => loadAll(false));
 document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
-
-// Filter controls — re-render on any change
 ['searchInput','filterPeriod','sortOrder'].forEach(id => {
   const el = document.getElementById(id);
-  if (el) el.addEventListener('input', () => renderQuotes(allQuotes));
-  if (el) el.addEventListener('change', () => renderQuotes(allQuotes));
+  if (el) { el.addEventListener('input', render); el.addEventListener('change', render); }
 });
 
-async function loadQuotes() {
+async function postList(endpoint, key){
   try {
-    const res = await fetch('/.netlify/functions/admin-quotes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: adminPassword }),
-    });
+    const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ password:adminPassword }) });
+    if (res.status === 401) return { unauthorised:true };
     const data = await res.json();
-
-    if (!res.ok) {
-      document.getElementById('loginErr').style.display = 'block';
-      return;
-    }
-
-    document.getElementById('loginErr').style.display = 'none';
-    document.getElementById('loginView').style.display = 'none';
-    document.getElementById('dashView').style.display = 'block';
-
-    allQuotes = data.quotes || [];
-    renderQuotes(allQuotes);
-  } catch (err) {
-    alert('Error loading quotes: ' + err.message);
-  }
+    return { rows: data[key] || [] };
+  } catch { return { rows: [] }; }
 }
 
-function getFilteredQuotes(quotes) {
-  const search    = (document.getElementById('searchInput').value || '').toLowerCase().trim();
-  const period    = document.getElementById('filterPeriod').value;
-  const sortVal   = document.getElementById('sortOrder').value;
-  const now       = new Date();
+async function loadAll(isLogin){
+  // Validate password against quotes first.
+  const q = await postList('/.netlify/functions/admin-quotes','quotes');
+  if (q.unauthorised) { document.getElementById('loginErr').style.display='block'; return; }
 
-  let filtered = quotes.filter(q => {
-    // Text search
-    if (search) {
-      const hay = ((q.clientName || '') + ' ' + (q.destination || '')).toLowerCase();
-      if (!hay.includes(search)) return false;
-    }
-    // Period filter
-    if (period && q.createdAt) {
-      const d = new Date(q.createdAt);
-      if (period === 'today') {
-        if (d.toDateString() !== now.toDateString()) return false;
-      } else if (period === 'week') {
-        const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
-        if (d < weekAgo) return false;
-      } else if (period === 'month') {
-        const monthAgo = new Date(now); monthAgo.setMonth(now.getMonth() - 1);
-        if (d < monthAgo) return false;
-      }
+  document.getElementById('loginErr').style.display='none';
+  document.getElementById('loginView').style.display='none';
+  document.getElementById('dashView').style.display='block';
+
+  DATA.quotes = q.rows;
+  const [conf, inv, leads] = await Promise.all([
+    postList('/.netlify/functions/admin-confirmations','confirmations'),
+    postList('/.netlify/functions/list-invoices','invoices'),
+    fetch('/.netlify/functions/list-leads').then(r=>r.json()).then(d=>({rows:d.leads||[]})).catch(()=>({rows:[]})),
+  ]);
+  DATA.confirmations = conf.rows;
+  DATA.invoices = inv.rows;
+  DATA.leads = leads.rows;
+
+  renderTabs();
+  render();
+}
+
+function renderTabs(){
+  const bar = document.getElementById('tabBar');
+  bar.innerHTML = Object.keys(TABS).map(k =>
+    `<button class="tab${k===activeTab?' on':''}" data-tab="${k}"><span>${TABS[k].label}</span><span class="tab-count">${DATA[k].length}</span></button>`
+  ).join('');
+  bar.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
+    activeTab = b.dataset.tab;
+    document.getElementById('searchInput').value = '';
+    renderTabs(); render();
+  }));
+}
+
+function render(){
+  const cfg  = TABS[activeTab];
+  const rows = DATA[activeTab] || [];
+
+  document.getElementById('dashTitle').textContent = cfg.title;
+  document.getElementById('dashSub').textContent   = cfg.sub;
+
+  // Stats
+  document.getElementById('statsBar').innerHTML = cfg.stats(rows).map(([lbl,num]) =>
+    `<div class="stat-card"><div class="stat-num">${num}</div><div class="stat-lbl">${lbl}</div></div>`
+  ).join('');
+
+  // Head
+  document.getElementById('tableHead').innerHTML = cfg.head.map(h=>`<th>${h}</th>`).join('');
+
+  // Filter + sort
+  const search = (document.getElementById('searchInput').value||'').toLowerCase().trim();
+  const period = document.getElementById('filterPeriod').value;
+  const sortV  = document.getElementById('sortOrder').value;
+  const now    = new Date();
+
+  let filtered = rows.filter(r => {
+    if (search && !cfg.searchText(r).toLowerCase().includes(search)) return false;
+    if (period && r.createdAt) {
+      const d = new Date(r.createdAt);
+      if (period==='today' && d.toDateString()!==now.toDateString()) return false;
+      if (period==='week')  { const w=new Date(now); w.setDate(now.getDate()-7); if(d<w) return false; }
+      if (period==='month') { const m=new Date(now); m.setMonth(now.getMonth()-1); if(d<m) return false; }
     }
     return true;
   });
-
-  // Sort
-  filtered.sort((a, b) => {
-    if (sortVal === 'oldest')  return new Date(a.createdAt) - new Date(b.createdAt);
-    if (sortVal === 'name')    return (a.clientName || '').localeCompare(b.clientName || '');
-    return new Date(b.createdAt) - new Date(a.createdAt); // newest
+  filtered.sort((a,b) => {
+    if (sortV==='oldest') return new Date(a.createdAt)-new Date(b.createdAt);
+    if (sortV==='name')   return String(a[cfg.nameField]||'').localeCompare(String(b[cfg.nameField]||''));
+    return new Date(b.createdAt)-new Date(a.createdAt);
   });
 
-  return filtered;
-}
+  // Count
+  document.getElementById('filterCount').textContent = filtered.length < rows.length
+    ? `Showing ${filtered.length} of ${rows.length}`
+    : `${rows.length} ${cfg.label.toLowerCase()}`;
 
-function renderQuotes(quotes) {
-  const filtered = getFilteredQuotes(quotes);
-
-  // Stats (always based on full set)
-  const today = new Date().toDateString();
-  const todayCount = quotes.filter(q => q.createdAt && new Date(q.createdAt).toDateString() === today).length;
-  const dests = new Set(quotes.map(q => q.destination).filter(Boolean)).size;
-  document.getElementById('statTotal').textContent = quotes.length;
-  document.getElementById('statToday').textContent = todayCount;
-  document.getElementById('statDests').textContent = dests;
-
-  // Filter count
-  const countEl = document.getElementById('filterCount');
-  if (countEl) {
-    countEl.textContent = filtered.length < quotes.length
-      ? `Showing ${filtered.length} of ${quotes.length}`
-      : `${quotes.length} quote${quotes.length !== 1 ? 's' : ''}`;
-  }
-
-  const tbody = document.getElementById('quotesBody');
-  if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>' +
-      (quotes.length === 0 ? 'No quotes generated yet.' : 'No quotes match your search.') +
-      '</p></div></td></tr>';
+  // Body
+  const tbody = document.getElementById('tableBody');
+  const cols  = cfg.head.length;
+  if (!filtered.length) {
+    const msg = rows.length===0
+      ? (activeTab==='leads' ? 'No open leads in the pipeline (or GHL not connected).' : `No ${cfg.label.toLowerCase()} yet.`)
+      : `No ${cfg.label.toLowerCase()} match your search.`;
+    tbody.innerHTML = `<tr><td colspan="${cols}"><div class="empty-state"><p>${msg}</p></div></td></tr>`;
     return;
   }
-
-  tbody.innerHTML = filtered.map((q, i) => {
-    const created = q.createdAt ? new Date(q.createdAt).toLocaleString('en-ZA', { dateStyle:'medium', timeStyle:'short' }) : '—';
-    const rowId   = 'detail-' + esc(q.quoteId).replace(/[^a-z0-9]/gi,'_');
-    const btnId   = 'dbtn-' + esc(q.quoteId).replace(/[^a-z0-9]/gi,'_');
-
-    // Build detail fields
-    const details = [];
-    if (q.phone)    details.push({ lbl:'Phone',    val:`<a href="tel:${esc(q.phone)}">${esc(q.phone)}</a>` });
-    if (q.email)    details.push({ lbl:'Email',    val:`<a href="mailto:${esc(q.email)}">${esc(q.email)}</a>` });
-    if (q.occasion) details.push({ lbl:'Occasion', val:esc(q.occasion) });
-    if (q.adults)   details.push({ lbl:'Adults',   val:esc(q.adults) });
-    if (q.children && q.children !== '0') details.push({ lbl:'Children', val:esc(q.children) });
-
-    const contactHTML = details.length
-      ? `<div class="detail-grid">${details.map(d => `<div class="detail-item"><div class="detail-lbl">${d.lbl}</div><div class="detail-val">${d.val}</div></div>`).join('')}</div>`
-      : `<p class="detail-empty">No additional contact details stored for this quote.</p>`;
-
-    // Margin + per-option pricing
-    const mk = q.markup;
-    const hasMargin = !!(mk && mk.pct);
-    const marginBadge = hasMargin
-      ? `<span class="margin-badge on">Margin +${esc(String(mk.pct))}%</span>`
-      : `<span class="margin-badge off">No markup applied</span>`;
-
-    const baseByNum = {};
-    (q.baseOptions || []).forEach(b => { if (b && b.n != null) baseByNum[b.n] = b; });
-
-    const opts = Array.isArray(q.options) ? q.options : [];
-    const optsHTML = opts.length
-      ? `<div class="opts-list">${opts.map(o => {
-          const base    = baseByNum[o.n];
-          const baseNote = (hasMargin && base && base.total)
-            ? `<span class="opt-base">supplier ${esc(base.total)} → +${esc(String(mk.pct))}%</span>` : '';
-          const ppNote  = o.pp ? ` <span class="opt-pp">(${esc(o.pp)} pp)</span>` : '';
-          const label   = (o.n != null ? 'Opt ' + esc(String(o.n)) + ' · ' : '') + esc(o.name || 'Option');
-          return `<div class="opt-line"><span class="opt-name">${label}</span><span class="opt-price">${esc(o.total || '—')}${ppNote}${baseNote}</span></div>`;
-        }).join('')}</div>`
-      : `<p class="detail-empty">No option pricing stored for this quote.</p>`;
-
-    const detailHTML = `
-      ${contactHTML}
-      <div class="detail-section">
-        <div class="detail-section-head">Options &amp; Pricing ${marginBadge}</div>
-        ${optsHTML}
-      </div>`;
-
-    return `
-      <tr>
-        <td class="td-name">${esc(q.clientName)}</td>
-        <td><div class="td-dest"><span class="dest-dot"></span>${esc(q.destination)}</div></td>
-        <td class="td-date">${esc(q.dates) || '—'}</td>
-        <td class="td-opts"><span class="pill">${q.optionCount} option${q.optionCount !== 1 ? 's' : ''}</span>${(q.markup && q.markup.pct) ? `<span class="pill margin">+${esc(String(q.markup.pct))}%</span>` : ''}</td>
-        <td class="td-date">${created}</td>
-        <td>
-          <div class="td-actions">
-            <span class="td-link"><a href="${esc(q.quoteUrl)}" target="_blank">View ↗</a></span>
-            <span class="td-edit"><a href="/?edit=${esc(q.quoteId)}" target="_blank">Edit ✏</a></span>
-            <button class="td-dup" onclick="duplicateQuote('${esc(q.quoteId)}', this)">Dup ⧉</button>
-            <button class="td-copy" onclick="copyLink('${esc(q.quoteUrl)}', this)">Copy</button>
-            <button class="td-details-btn" id="${btnId}" onclick="toggleDetails('${rowId}','${btnId}')">Details ▾</button>
-          </div>
-        </td>
-      </tr>
-      <tr class="detail-row" id="${rowId}">
-        <td colspan="6">${detailHTML}</td>
-      </tr>`;
-  }).join('');
+  tbody.innerHTML = filtered.map(r => `<tr>${cfg.row(r)}</tr>`).join('');
 }
 
-function toggleDetails(rowId, btnId) {
-  const row = document.getElementById(rowId);
-  const btn = document.getElementById(btnId);
-  if (!row) return;
-  const isOpen = row.classList.contains('visible');
-  row.classList.toggle('visible', !isOpen);
-  if (btn) {
-    btn.textContent = isOpen ? 'Details ▾' : 'Details ▴';
-    btn.classList.toggle('open', !isOpen);
-  }
-}
-
-function copyLink(url, btn) {
+function copyLink(url, btn){
   navigator.clipboard.writeText(url).then(() => {
-    btn.textContent = '✓ Copied!';
-    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    const t = btn.textContent; btn.textContent='✓ Copied!';
+    setTimeout(()=>{ btn.textContent=t; }, 1800);
   });
 }
 
-function duplicateQuote(quoteId, btn) {
-  const url = '/?duplicate=' + encodeURIComponent(quoteId);
-  window.open(url, '_blank');
-}
-
-function exportCSV() {
-  if (!allQuotes.length) { alert('No quotes to export.'); return; }
-
-  function csvCell(val) {
-    const s = String(val == null ? '' : val).replace(/"/g, '""');
-    return /[,"\n\r]/.test(s) ? `"${s}"` : s;
-  }
-
-  const headers = ['Client Name','Destination','Dates','Occasion','Adults','Children','Phone','Email','Options','Markup %','Created','Quote URL'];
-  const rows = allQuotes.map(q => [
-    q.clientName, q.destination, q.dates, q.occasion,
-    q.adults, q.children, q.phone, q.email,
-    q.optionCount,
-    (q.markup && q.markup.pct) ? q.markup.pct : '',
-    q.createdAt ? new Date(q.createdAt).toLocaleString('en-ZA') : '',
-    q.quoteUrl,
-  ].map(csvCell).join(','));
-
-  const csv     = [headers.join(','), ...rows].join('\r\n');
-  const blob    = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url     = URL.createObjectURL(blob);
-  const a       = document.createElement('a');
-  a.href        = url;
-  a.download    = 'izitravel-quotes-' + new Date().toISOString().slice(0,10) + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function esc(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function exportCSV(){
+  const cfg = TABS[activeTab];
+  const rows = DATA[activeTab] || [];
+  if (!rows.length) { alert(`No ${cfg.label.toLowerCase()} to export.`); return; }
+  const csvCell = v => { const s=String(v==null?'':v).replace(/"/g,'""'); return /[,"\n\r]/.test(s)?`"${s}"`:s; };
+  const lines = [cfg.csv.headers.join(',')].concat(rows.map(r => cfg.csv.row(r).map(csvCell).join(',')));
+  const blob = new Blob([lines.join('\r\n')], { type:'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download=`izitravel-${activeTab}-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
 </script>
 </body>
