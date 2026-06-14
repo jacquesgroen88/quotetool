@@ -109,31 +109,49 @@ const App = (() => {
     if (!state.quoteData) return;
     const pctStr = ($('markup-pct') || {}).value;
     const pct = parseFloat(pctStr);
-    if (isNaN(pct) || pct <= 0) { alert('Please enter a markup percentage greater than 0.'); return; }
-    const multiplier = 1 + pct / 100;
-
-    function markupPrice(priceStr) {
-      if (!priceStr) return priceStr;
-      // Strip R, spaces, commas, ZAR prefix, then parse
-      const num = parseFloat(String(priceStr).replace(/[^0-9.]/g, ''));
-      if (isNaN(num)) return priceStr;
-      const newNum = Math.round(num * multiplier);
-      // Reformat with thousands separator
-      return 'R' + newNum.toLocaleString('en-ZA');
-    }
+    if (isNaN(pct) || pct < 0) { alert('Please enter a markup percentage of 0 or more.'); return; }
 
     const updated = { ...state.quoteData };
-    updated.options = (updated.options || []).map(opt => ({
-      ...opt,
-      pricePerPerson: markupPrice(opt.pricePerPerson),
-      totalPrice:     markupPrice(opt.totalPrice),
-    }));
+
+    // Snapshot the pre-markup ("base"/supplier) prices ONCE, so markup is always
+    // relative to the original: re-applying replaces rather than compounds, and
+    // entering 0 restores the supplier prices. Also lets the admin show base → marked-up.
+    if (!Array.isArray(updated._baseOptions)) {
+      updated._baseOptions = (updated.options || []).map(o => ({
+        optionNumber:   o.optionNumber,
+        pricePerPerson: o.pricePerPerson,
+        totalPrice:     o.totalPrice,
+      }));
+    }
+    const baseByNum = {};
+    updated._baseOptions.forEach(b => { baseByNum[b.optionNumber] = b; });
+
+    const multiplier = 1 + pct / 100;
+    function markupFrom(priceStr) {
+      if (!priceStr) return priceStr;
+      const num = parseFloat(String(priceStr).replace(/[^0-9.]/g, ''));
+      if (isNaN(num)) return priceStr;
+      return 'R' + Math.round(num * multiplier).toLocaleString('en-ZA');
+    }
+
+    updated.options = (updated.options || []).map(opt => {
+      const base = baseByNum[opt.optionNumber] || opt;
+      return {
+        ...opt,
+        pricePerPerson: markupFrom(base.pricePerPerson),
+        totalPrice:     markupFrom(base.totalPrice),
+      };
+    });
+
+    // Record the margin so the admin dashboard can show whether one was added.
+    updated.markup = pct > 0 ? { pct, appliedAt: new Date().toISOString() } : null;
+
     state.quoteData = updated;
     refreshPreview();
     if (state.editQuoteId) saveQuoteLink(state.quoteData, true);
 
     const btn = $('markup-apply-btn');
-    if (btn) { btn.textContent = '✓ Applied!'; setTimeout(() => { btn.textContent = 'Apply Markup'; }, 2000); }
+    if (btn) { btn.textContent = pct > 0 ? '✓ Applied!' : '✓ Reset'; setTimeout(() => { btn.textContent = 'Apply Markup'; }, 2000); }
   }
 
   // ── Auto-detect ────────────────────────────────────────────────────────────

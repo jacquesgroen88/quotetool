@@ -51,6 +51,18 @@ exports.handler = async (event) => {
             createdAt:   record.createdAt   || '',
             quoteUrl:    `${siteUrl}/.netlify/functions/view-quote?id=${key}`,
             optionCount: record.quoteData?.options?.length || 0,
+            options:     (record.quoteData?.options || []).map(o => ({
+              n:     o.optionNumber,
+              name:  o.resortName    || '',
+              pp:    o.pricePerPerson || '',
+              total: o.totalPrice    || '',
+            })),
+            markup:      record.quoteData?.markup || null,
+            baseOptions: (record.quoteData?._baseOptions || []).map(b => ({
+              n:     b.optionNumber,
+              pp:    b.pricePerPerson,
+              total: b.totalPrice,
+            })),
             phone:       record.phone       || '',
             email:       record.email       || '',
             occasion:    record.occasion    || '',
