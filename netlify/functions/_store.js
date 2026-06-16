@@ -231,4 +231,27 @@ async function listAll(type = 'quote') {
   return out;
 }
 
-module.exports = { init, setJSON, getJSON, listAll };
+/**
+ * Delete a record by its key (gist ID in prod, filename in local dev).
+ * Returns true if deleted, false if not found.
+ */
+async function removeRecord(key) {
+  if (isProduction()) {
+    const token = process.env.GITHUB_TOKEN;
+    if (!token) throw new Error('GITHUB_TOKEN not set');
+    const { status, body } = await ghRequest('DELETE', `/gists/${key}`, token, null);
+    if (status === 404) return false;
+    if (status === 204) return true;
+    if (status < 200 || status >= 300) {
+      throw new Error(`GitHub API DELETE ${status}: ${body.slice(0, 200)}`);
+    }
+    return true;
+  }
+  // Local dev
+  const file = path.join(LOCAL_DIR, key + '.json');
+  if (!fs.existsSync(file)) return false;
+  fs.unlinkSync(file);
+  return true;
+}
+
+module.exports = { init, setJSON, getJSON, listAll, removeRecord };
