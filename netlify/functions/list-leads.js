@@ -13,16 +13,6 @@ try {
 } catch {}
 
 const GHL_APP = process.env.GHL_APP || 'https://app.reviewtap.co.za';
-const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-
-function monthsUntil(monthName, year, now) {
-  if (!monthName) return null;
-  const key = String(monthName).trim().toLowerCase().slice(0, 3);
-  const mi = MONTHS.findIndex(m => m.startsWith(key));
-  if (mi < 0) return null;
-  const y = parseInt(year, 10) || now.getFullYear();
-  return (y - now.getFullYear()) * 12 + (mi - now.getMonth());
-}
 
 exports.handler = async (event) => {
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
@@ -56,9 +46,9 @@ exports.handler = async (event) => {
         if (k) cf[k] = f.value != null ? f.value : (f.field_value != null ? f.field_value : f.fieldValue);
       });
       const g = (k) => cf['contact.' + k] || '';
-      const month = g('travel_month'), year = g('travel_year');
-      const mu = monthsUntil(month, year, now);
-      const urgent = mu != null && mu >= 0 && mu <= 1;
+      const departureDate = g('departure_date'), returnDate = g('return_date');
+      const daysUntil = departureDate ? (new Date(departureDate) - now) / 86400000 : null;
+      const urgent = daysUntil != null && daysUntil >= 0 && daysUntil <= 30;
       const tags = (contact && contact.tags) || (o.contact && o.contact.tags) || [];
 
       const group = QUOTED_STAGES[o.pipelineStageId] ? 'quoted' : 'to_quote';
@@ -74,7 +64,7 @@ exports.handler = async (event) => {
         phone:       (contact && contact.phone) || (o.contact && o.contact.phone) || '',
         stage:       STAGE_NAME[o.pipelineStageId],
         destination: g('your_destination'),
-        dates:       [month, year].filter(Boolean).join(' '),
+        dates:       [departureDate, returnDate].filter(Boolean).join(' - '),
         pax:         (g('how_many_people_will_be_traveling') || '').replace(/[^0-9+]/g, ''),
         budget:      g('budget'),
         tags,

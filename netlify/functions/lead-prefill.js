@@ -35,12 +35,12 @@ exports.handler = async (event) => {
     });
     const g = (k) => cf['contact.' + k] || '';
 
-    const month = g('travel_month'), year = g('travel_year');
+    const departureDate = g('departure_date'), returnDate = g('return_date');
     const prefill = {
       contactId:   cid,
       clientName:  [contact.firstName, contact.lastName].filter(Boolean).join(' ').trim(),
       destination: g('your_destination'),
-      dates:       [month, year].filter(Boolean).join(' '),
+      dates:       [departureDate, returnDate].filter(Boolean).join(' - '),
       adults:      (g('how_many_people_will_be_traveling') || '').replace(/[^0-9]/g, ''),
       phone:       contact.phone || '',
       email:       contact.email || '',
