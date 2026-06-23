@@ -85,6 +85,28 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
 .integrity-line+.integrity-line{margin-top:6px}
 .integrity-ok-text{color:#166534;font-weight:600}.integrity-warn-text{color:#92400e;font-weight:600}
 .integrity-sub{font-size:11px;color:var(--gray-400);margin-top:9px}
+/* AI edit chat card */
+.chat-card{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.chat-header{padding:14px 18px;border-bottom:1px solid var(--gray-100);background:var(--gray-50)}
+.chat-header h3{font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:2px}
+.chat-header p{font-size:12px;color:var(--gray-400)}
+.chips-wrap{padding:10px 14px;border-bottom:1px solid var(--gray-100);display:flex;flex-wrap:wrap;gap:6px;background:#fff}
+.chip{padding:5px 11px;background:var(--pink-light);color:var(--pink-dark);border:1px solid #fecaca;border-radius:999px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.chip:hover{background:#fecaca;color:var(--pink-dark)}
+#chat-history{min-height:160px;max-height:300px;overflow-y:auto;overflow-x:hidden;padding:14px;display:flex;flex-direction:column;gap:10px}
+.chat-msg{display:flex}
+.chat-agent{justify-content:flex-end}
+.chat-ai{justify-content:flex-start}
+.chat-bubble{max-width:86%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5;word-break:break-word;overflow-wrap:anywhere}
+.chat-agent .chat-bubble{background:var(--gray-100);color:var(--gray-900);border-bottom-right-radius:4px}
+.chat-ai .chat-bubble{background:var(--pink-light);color:var(--pink-dark);border-bottom-left-radius:4px;border:1px solid #fecaca}
+.chat-empty{font-size:13px;color:var(--gray-400);text-align:center;padding:24px 16px;line-height:1.7;word-break:break-word;width:100%;box-sizing:border-box}
+.chat-input-wrap{padding:12px;border-top:1px solid var(--gray-100);display:flex;flex-direction:column;gap:8px;background:#fff}
+#chat-input{flex:1;padding:10px 13px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13.5px;font-family:inherit;color:var(--gray-900);outline:none;transition:border-color .15s}
+#chat-input:focus{border-color:var(--pink)}
+#chat-send{padding:10px 16px;background:var(--pink);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s;white-space:nowrap}
+#chat-send:hover{background:var(--pink-dark)}
+#chat-send:disabled{background:var(--gray-400);cursor:not-allowed}
 @media(max-width:900px){.editor-layout{grid-template-columns:1fr;height:auto}.preview-panel{height:70vw;min-height:400px}.chat-panel{height:auto}}
 @media(max-width:640px){.app-main{padding:20px 16px}.upload-layout{grid-template-columns:1fr}}
 </style>
@@ -191,6 +213,34 @@ body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-9
             <button class="markup-btn" id="markup-apply-btn">Apply</button>
           </div>
           <p class="markup-hint">Adds margin over the supplier price across per-person, total, deposit &amp; balance. Enter 0 to reset to supplier price.</p>
+        </div>
+        <!-- AI Edit chat -->
+        <div class="chat-card">
+          <div class="chat-header">
+            <h3>✏️ Edit Assistant</h3>
+            <p>Describe any change — the confirmation updates instantly.</p>
+          </div>
+          <div class="chips-wrap">
+            <span class="chip" data-chip="Change the room type to ">Change room</span>
+            <span class="chip" data-chip="Add to inclusions: ">Add inclusion</span>
+            <span class="chip" data-chip="Remove the added value section">Remove added value</span>
+            <span class="chip" data-chip="Change the deposit due date to ">Deposit date</span>
+            <span class="chip" data-chip="Fix passenger name: ">Fix name</span>
+            <span class="chip" data-chip="Change the board basis to ">Change board</span>
+          </div>
+          <div id="chat-history">
+            <div class="chat-empty">
+              No changes yet.<br>
+              Use the chips above or type a change below.
+            </div>
+          </div>
+          <div class="chat-input-wrap">
+            <div style="display:flex;gap:8px;width:100%">
+              <input type="text" id="chat-input" placeholder="e.g. Change the room type to Ocean Front Suite…" style="flex:1"/>
+              <button id="chat-send">Apply Change</button>
+            </div>
+            <button id="undo-btn" style="display:none;width:100%;padding:8px;background:var(--gray-50);color:var(--gray-500);border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;text-align:center" onmouseover="this.style.borderColor='var(--pink)';this.style.color='var(--pink)';this.style.background='var(--pink-light)'" onmouseout="this.style.borderColor='var(--gray-200)';this.style.color='var(--gray-500)';this.style.background='var(--gray-50)'">↩ Undo Last Change</button>
+          </div>
         </div>
       </div>
     </div>

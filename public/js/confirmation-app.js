@@ -4,6 +4,7 @@ const ConfApp = (() => {
     file: null, confirmationData: null, logoBase64: null,
     currentBlobUrl: null, confirmationId: null, confirmationUrl: null,
     leadContactId: null, clientEmail: null, clientPhone: null,
+    chatMessages: [], isEditing: false, confHistory: [],
   };
   const $ = (id) => document.getElementById(id);
 
@@ -91,6 +92,7 @@ const ConfApp = (() => {
       try { json = await res.json(); } catch { throw new Error(`Server error ${res.status} — the request may have timed out.`); }
       if (!res.ok || json.error) throw new Error(json.error || `Server error: ${res.status}`);
       state.confirmationData = json.result;
+      state.chatMessages = []; state.confHistory = []; renderChatHistory(); updateUndoBtn();
 
       // ── Telephone handling ──────────────────────────────────────────────
       // Prefer a GHL-prefilled phone, then the manual field, then anything the
@@ -214,6 +216,107 @@ const ConfApp = (() => {
     card.style.display = 'block';
   }
 
+  // ── Price re-check after an edit ───────────────────────────────────────────
+  // We don't have the supplier raw text on the client, but generate-confirmation
+  // left _sourcePrices (every Rand figure found in the doc). Re-run the same
+  // math/source checks the server did so the Price Check card stays honest after
+  // a chat edit. Advisory only — never alters prices.
+  function recheckIntegrity(cd) {
+    try {
+      if (!cd || !cd.pricing || !Array.isArray(cd._sourcePrices)) return;
+      const toRand = (v) => {
+        const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, ''));
+        return isNaN(n) ? null : Math.round(n);
+      };
+      const source = new Set(cd._sourcePrices);
+      const p   = cd.pricing;
+      const pp  = toRand(p.pricePerPerson);
+      const tot = toRand(p.total);
+      const dep = toRand(p.deposit);
+      const bal = toRand(p.balance);
+      const pax = parseInt(cd.paxCount, 10) || (Array.isArray(cd.passengers) ? cd.passengers.length : 2) || 2;
+      const ppInSource    = pp  != null && source.has(pp);
+      const totalInSource = tot != null && source.has(tot);
+      const mathOk     = (pp != null && tot != null) ? Math.abs(pp * pax - tot) <= pax : null;
+      const scheduleOk = (dep != null && bal != null && tot != null) ? Math.abs(dep + bal - tot) <= 1 : null;
+      cd._priceCheck = { ppInSource, totalInSource, mathOk, scheduleOk, verified: ppInSource && totalInSource };
+    } catch (_) { /* advisory only */ }
+  }
+
+  // ── Undo history ───────────────────────────────────────────────────────────
+  function pushHistory(data) {
+    state.confHistory.push(JSON.parse(JSON.stringify(data)));
+    if (state.confHistory.length > 10) state.confHistory.shift();
+    updateUndoBtn();
+  }
+  function updateUndoBtn() {
+    const btn = $('undo-btn');
+    if (btn) btn.style.display = state.confHistory.length > 0 ? 'block' : 'none';
+  }
+  function undoLastEdit() {
+    if (state.confHistory.length === 0) return;
+    state.confirmationData = state.confHistory.pop();
+    updateUndoBtn();
+    refreshPreview();
+    renderIntegrity(state.confirmationData);
+    if (state.confirmationId) saveLink(true);
+    addChatMsg('ai', '↩ Reverted to the previous version.');
+  }
+
+  // ── Chat edit ──────────────────────────────────────────────────────────────
+  async function runEdit(message) {
+    if (state.isEditing || !message.trim() || !state.confirmationData) return;
+    state.isEditing = true;
+    addChatMsg('agent', message);
+    setChatInputState(true);
+    try {
+      pushHistory(state.confirmationData);
+      const res = await fetch('/.netlify/functions/edit-confirmation', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ confirmationData: state.confirmationData, message }),
+      });
+      let result = {};
+      try { result = await res.json(); } catch { throw new Error('Edit request timed out. Please try again.'); }
+      if (result.error) throw new Error(result.error);
+      state.confirmationData = result.confirmationData;
+      recheckIntegrity(state.confirmationData);
+      addChatMsg('ai', result.changes || 'Done — confirmation updated.');
+      refreshPreview();
+      renderIntegrity(state.confirmationData);
+      if (state.confirmationId) saveLink(true);
+    } catch (err) {
+      addChatMsg('ai', '⚠️ Sorry, I couldn\'t apply that change: ' + (err.message || 'Unknown error'));
+    } finally {
+      state.isEditing = false;
+      setChatInputState(false);
+    }
+  }
+
+  function addChatMsg(role, text) { state.chatMessages.push({ role, text }); renderChatHistory(); }
+  function renderChatHistory() {
+    const el = $('chat-history');
+    if (!el) return;
+    if (state.chatMessages.length === 0) {
+      el.innerHTML = '<div class="chat-empty">No changes yet.<br>Use the chips above or type a change below.</div>';
+      return;
+    }
+    el.innerHTML = state.chatMessages.map(m => `
+      <div class="chat-msg ${m.role === 'agent' ? 'chat-agent' : 'chat-ai'}">
+        <div class="chat-bubble">${escapeHtml(m.text)}</div>
+      </div>`).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+  function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function setChatInputState(disabled) {
+    const inp = $('chat-input'), btn = $('chat-send');
+    if (inp) inp.disabled = disabled;
+    if (btn) { btn.disabled = disabled; btn.textContent = disabled ? 'Applying…' : 'Apply Change'; }
+  }
+
   // ── File drop ──
   function initDropZone() {
     const zone = $('drop-zone'), input = $('file-input'); if (!zone || !input) return;
@@ -312,8 +415,32 @@ const ConfApp = (() => {
     $('generate-btn') && $('generate-btn').addEventListener('click', runGenerate);
     $('download-btn') && $('download-btn').addEventListener('click', downloadConfirmation);
     $('markup-apply-btn') && $('markup-apply-btn').addEventListener('click', applyMarkup);
+
+    // Chat edit — send button, Enter key, quick chips, undo
+    const sendBtn = $('chat-send');
+    if (sendBtn) sendBtn.addEventListener('click', () => {
+      const inp = $('chat-input'); const val = inp.value.trim();
+      if (val) { inp.value = ''; runEdit(val); }
+    });
+    const chatInput = $('chat-input');
+    if (chatInput) chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const val = chatInput.value.trim();
+        if (val) { chatInput.value = ''; runEdit(val); }
+      }
+    });
+    document.querySelectorAll('[data-chip]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const inp = $('chat-input');
+        if (inp) { inp.value = chip.getAttribute('data-chip'); inp.focus(); }
+      });
+    });
+    $('undo-btn') && $('undo-btn').addEventListener('click', undoLastEdit);
+
     $('new-btn') && $('new-btn').addEventListener('click', () => {
-      state = { file: null, confirmationData: null, logoBase64: state.logoBase64, currentBlobUrl: null, confirmationId: null, confirmationUrl: null };
+      state = { file: null, confirmationData: null, logoBase64: state.logoBase64, currentBlobUrl: null, confirmationId: null, confirmationUrl: null, chatMessages: [], isEditing: false, confHistory: [] };
+      renderChatHistory(); updateUndoBtn();
       const zone = $('drop-zone');
       if (zone) zone.innerHTML = '<div class="drop-icon">&#128196;</div><div class="drop-main">Drop supplier confirmation here</div><div class="drop-sub">PDF or DOCX &mdash; up to 8 MB</div><div class="drop-btn">Browse Files</div>';
       ['f-clientName', 'f-destination', 'f-tripType', 'f-phone', 'f-email'].forEach(id => { const el = $(id); if (el) el.value = ''; });
