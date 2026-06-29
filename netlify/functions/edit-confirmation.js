@@ -1,6 +1,7 @@
 const https = require('https');
 const fs    = require('fs');
 const path  = require('path');
+const { applyOps, stripForDisplay } = require('./_patch');
 
 try {
   const envPath = path.resolve(__dirname, '../../.env');
@@ -36,39 +37,40 @@ function callOpenRouter(apiKey, payload) {
       }
     );
     req.on('error', (err) => reject(err));
-    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Edit request timed out. Please try again.')); });
+    req.setTimeout(20000, () => { req.destroy(); reject(new Error('Edit request timed out. Please try again.')); });
     req.write(bodyBuf);
     req.end();
   });
 }
 
-// Pull internal bookkeeping fields out of the data before the AI sees them, so
-// it can never drop or mangle them. These drive the markup baseline and the
-// Supplier Price Check card. Returns the stripped copies; merge them back after.
-function stripInternal(cd) {
-  const internal = { top: {}, pricing: {} };
-  if (cd && typeof cd === 'object') {
-    for (const k of Object.keys(cd)) {
-      if (k.charAt(0) === '_' || k === 'recordType') { internal.top[k] = cd[k]; delete cd[k]; }
-    }
-    if (cd.pricing && typeof cd.pricing === 'object') {
-      for (const k of Object.keys(cd.pricing)) {
-        if (k.charAt(0) === '_' || k === 'markupPct') { internal.pricing[k] = cd.pricing[k]; delete cd.pricing[k]; }
-      }
-    }
-  }
-  return internal;
+const SYSTEM_PROMPT = `You are an AI assistant helping a travel agent modify a client BOOKING CONFIRMATION.
+You are given the current confirmation as JSON and a natural-language instruction.
+Do NOT rewrite the whole confirmation. Return ONLY a small list of edit OPERATIONS that achieve the instruction, as JSON — no markdown, no commentary:
+
+{
+  "changes": "one clear sentence describing exactly what you changed",
+  "ops": [ { "op": "set", "path": "pricing.deposit", "value": "R10 000.00" } ]
 }
 
-function restoreInternal(cd, internal) {
-  if (!cd || typeof cd !== 'object') return cd;
-  Object.assign(cd, internal.top);
-  if (Object.keys(internal.pricing).length) {
-    if (!cd.pricing || typeof cd.pricing !== 'object') cd.pricing = {};
-    Object.assign(cd.pricing, internal.pricing);
-  }
-  return cd;
-}
+Each op is exactly one of:
+- { "op": "set",    "path": "<field path>",       "value": <new value> }   // set or replace a field
+- { "op": "append", "path": "<array field path>", "value": <item> }        // add one item to a list
+- { "op": "remove", "path": "<array field path>", "index": <0-based> }      // remove a list item; OMIT "index" to remove the LAST item
+- { "op": "delete", "path": "<field path>" }                                // remove a field entirely
+
+PATHS use dot notation with zero-based [index] for arrays, and MUST match the JSON you are given. Examples:
+- "roomType"               → top-level field
+- "pricing.total"          → a field inside the pricing object
+- "inclusions"             → the inclusions list
+- "passengers[0].lastName" → a field on the first passenger
+
+RULES:
+- Make ONLY the change requested. Touch the fewest fields possible.
+- PASSENGER NAMES: preserve capitalisation exactly as given (surnames are often ALL CAPS — keep them ALL CAPS). Never normalise spelling or case unless explicitly told to.
+- PRICING: amounts are strings like "R77 444.00". If you change a price, keep the figures reconciled: deposit + balance must equal total, and pricePerPerson × paxCount should equal total. If an instruction makes them not reconcile, still apply it but say so in "changes".
+- BRANDING: never introduce a supplier or wholesaler name (Holiday Factory, AFS, Tourvest, Thompsons, Club Travel, etc.).
+- Never invent fields that do not already exist in the JSON.
+- If you cannot map the instruction to any operation, return "ops": [] and explain why in "changes".`;
 
 exports.handler = async (event) => {
   const cors = {
@@ -85,28 +87,12 @@ exports.handler = async (event) => {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY not set in environment.');
 
-    // Strip internal state so the AI only ever touches client-visible fields.
-    const working  = JSON.parse(JSON.stringify(confirmationData || {}));
-    const internal = stripInternal(working);
-
-    const systemPrompt = `You are an AI assistant helping a travel agent modify a client BOOKING CONFIRMATION.
-You receive the current confirmation data as JSON and a natural language instruction.
-Return ONLY a JSON object — no markdown, no explanation:
-{
-  "changes": "one clear sentence describing exactly what you changed",
-  "data": { ...the complete modified confirmation object... }
-}
-Make ONLY the change requested. Keep every other field exactly as-is.
-The "data" field must be the COMPLETE confirmation object, not just the changed parts.
-
-RULES:
-- PASSENGER NAMES: preserve capitalisation exactly as given (surnames are often ALL CAPS — keep them ALL CAPS). Never normalise spelling or case unless explicitly told to.
-- PRICING: amounts are strings like "R77 444.00". If the agent changes a price, keep the figures reconciled: deposit + balance must equal total, and pricePerPerson × paxCount should equal total. If an instruction makes them not reconcile, still apply it but say so in "changes".
-- BRANDING: never introduce a supplier or wholesaler name (Holiday Factory, AFS, Tourvest, Thompsons, Club Travel, etc.).
-- Keep arrays (inclusions, exclusions, flights, passengers, etc.) in the same shape they arrived in.`;
+    // Show the AI only client-visible fields (markup baseline / price-check /
+    // source prices stripped — it can never drop or mangle them).
+    const forAI = stripForDisplay(confirmationData || {});
 
     const userPrompt = `Current confirmation data:
-${JSON.stringify(working, null, 2)}
+${JSON.stringify(forAI, null, 2)}
 
 Agent instruction: "${message}"`;
 
@@ -114,10 +100,10 @@ Agent instruction: "${message}"`;
       model:    'anthropic/claude-haiku-4.5',
       provider: { order: ['Anthropic'], allow_fallbacks: true },
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user',   content: userPrompt },
       ],
-      max_tokens: 4096,
+      max_tokens: 1500,
     });
 
     const aiData = JSON.parse(body);
@@ -128,13 +114,30 @@ Agent instruction: "${message}"`;
     const cleaned = content.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
     const result  = JSON.parse(cleaned);
 
-    // Merge the protected internal fields back onto the edited object.
-    const merged = restoreInternal(result.data, internal);
+    // Apply ops to a clone of the FULL confirmation (internal fields intact).
+    // The client re-runs the Supplier Price Check from the retained _sourcePrices.
+    const merged = JSON.parse(JSON.stringify(confirmationData || {}));
+
+    const changes = result.changes || 'Confirmation updated.';
+    if (Array.isArray(result.ops) && result.ops.length) {
+      const { applied } = applyOps(merged, result.ops);
+      if (!applied) throw new Error("I couldn't apply that change — please rephrase or be more specific.");
+    } else if (result.data && typeof result.data === 'object') {
+      // Backward-compatible fallback: model returned a full object instead of ops.
+      const clean = stripForDisplay(result.data);
+      for (const k of Object.keys(merged)) {
+        if (k.charAt(0) === '_' || k === 'recordType') continue;
+        delete merged[k];
+      }
+      Object.assign(merged, clean);
+    } else {
+      throw new Error("I couldn't apply that change — please rephrase or be more specific.");
+    }
 
     return {
       statusCode: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirmationData: merged, changes: result.changes }),
+      body: JSON.stringify({ confirmationData: merged, changes }),
     };
   } catch (err) {
     return {
