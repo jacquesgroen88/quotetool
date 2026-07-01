@@ -32,8 +32,22 @@ const STAGES = {
 
 // Contact custom-field IDs we write to
 const FIELDS = {
-  proposalLink: 'GZGD3NKFlV1JGnC0LGqd', // "Proposal Link" — last quote sent
+  proposalLink:   'GZGD3NKFlV1JGnC0LGqd', // "Proposal Link" — last quote sent
+  quoteSentDate:  'eycX7bcIUKYGSyZSyVKU', // "Quote Sent Date" — stamped when a quote is marked sent (drives follow-up cadence)
+  quoteValueBand: 'aJ8MU9mXT8qyzXtXSxZc', // "Quote Value Band" — single-select deal size (works even when card is moved by hand)
+  lostReason:     'JJkUE2zQ2SMh1JwfMLJc', // "Lost Reason" — single-select, powers the learning loop
 };
+
+// Map a numeric quote value (ZAR total) to the Quote Value Band option label.
+function valueBand(value) {
+  const v = Number(value);
+  if (!isFinite(v) || v <= 0) return null;
+  if (v < 15000)  return 'Under R15k';
+  if (v < 30000)  return 'R15k - R30k';
+  if (v < 50000)  return 'R30k - R50k';
+  if (v < 80000)  return 'R50k - R80k';
+  return 'R80k+';
+}
 
 function pit()     { return process.env.GHL_PIT_KEY || ''; }
 function enabled() { return !!pit(); }
@@ -152,7 +166,7 @@ async function sendEmail(contactId, subject, htmlBody) {
 }
 
 module.exports = {
-  enabled, STAGES, FIELDS, LOCATION, PIPELINE,
+  enabled, STAGES, FIELDS, LOCATION, PIPELINE, valueBand,
   getContact, getCustomFieldMap, findOpportunity, findContactByEmail,
   moveToStage, addNote, addTags, setContactField, sendEmail,
   _raw: ghReq,

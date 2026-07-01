@@ -27,6 +27,14 @@ exports.handler = async (event) => {
     }
     const monetaryValue = (value != null && !isNaN(value)) ? Math.round(Number(value)) : undefined;
     await ghl.moveToStage({ contactId, name: name || 'Travel enquiry', stageId: ghl.STAGES.quoteSent, monetaryValue });
+
+    // Stamp the fields the post-quote follow-up cadence + daily digest read from.
+    // Best-effort: each no-ops gracefully. Today's date (UTC) in YYYY-MM-DD.
+    const today = new Date().toISOString().slice(0, 10);
+    await ghl.setContactField(contactId, ghl.FIELDS.quoteSentDate, today);
+    const band = ghl.valueBand(monetaryValue);
+    if (band) await ghl.setContactField(contactId, ghl.FIELDS.quoteValueBand, band);
+
     if (quoteUrl) {
       await ghl.addNote(contactId, `📄 Quote sent to client — ${quoteUrl}`);
       await ghl.setContactField(contactId, ghl.FIELDS.proposalLink, quoteUrl); // for the Leads → Quoted view
