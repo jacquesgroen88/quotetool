@@ -62,7 +62,15 @@ const ConfApp = (() => {
     p.pricePerPerson = mk(base.pricePerPerson);
     p.total          = mk(base.total);
     p.deposit        = mk(base.deposit);
-    p.balance        = mk(base.balance);
+    // Balance = rounded total − rounded deposit so the payment schedule always
+    // reconciles to the rand (rounding each field independently drifts R1-2).
+    {
+      const tN = parseFloat(String(p.total   || '').replace(/[^0-9.]/g, ''));
+      const dN = parseFloat(String(p.deposit || '').replace(/[^0-9.]/g, ''));
+      p.balance = (base.balance && !isNaN(tN) && !isNaN(dN))
+        ? 'R' + Math.round(tN - dN).toLocaleString('en-ZA')
+        : mk(base.balance);
+    }
     p.markupPct      = pct > 0 ? pct : 0;
     // keep base markup reference fields current for the admin
     p._baseTotal     = base.total; p._basePerPerson = base.pricePerPerson;

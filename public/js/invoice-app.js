@@ -76,6 +76,15 @@
     if (doMark) markInvoiced(data);
   }
 
+  // Save failed → no shareable URL exists. Offer Download only — WhatsApp/Email
+  // buttons here would send the client a message with a broken "link".
+  function renderSaveFailed(data) {
+    $('link-card').style.display = 'block';
+    $('link-row').innerHTML = `<span style="color:#b91c1c;font-size:13px">⚠ Couldn't create a shareable link — download the invoice and attach it instead.</span>
+      <a class="btn b-dl" id="i-dl">⤓ Download</a>`;
+    $('i-dl').onclick = (e) => { e.preventDefault(); window.IziPDF.download(buildInvoiceHTML(data, state.logoBase64), buildInvoiceFilename(data)); };
+  }
+
   function renderLinks(url, data) {
     const cname = data.clientName || 'there';
     const waNum = normWa(state.clientPhone || data.phone);
@@ -109,8 +118,8 @@
       const res = await fetch('/.netlify/functions/save-invoice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const j = await res.json();
       if (j.invoiceUrl) { state.invoiceUrl = j.invoiceUrl; state.invoiceId = j.invoiceId; renderLinks(j.invoiceUrl, data); }
-      else renderLinks('(saving failed — use Download)', data);
-    } catch { renderLinks('(saving failed — use Download)', data); }
+      else renderSaveFailed(data);
+    } catch { renderSaveFailed(data); }
     // Generating an invoice for a CRM lead moves the deal to Invoiced (and sets
     // its value), as well as the send action — per Jacques's request.
     markInvoiced(data);

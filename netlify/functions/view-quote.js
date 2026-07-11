@@ -1,4 +1,11 @@
 const store = require('./_store');
+const { stripForDisplay } = require('./_patch');
+
+// JSON destined for a <script> block: JSON.stringify does not escape "<", so a
+// stored string containing "</script>" would break out of the tag. Escape it.
+function jsonForScript(obj) {
+  return JSON.stringify(obj).replace(/</g, '\\u003c');
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') {
@@ -30,6 +37,12 @@ exports.handler = async (event) => {
     // Cache-bust using deploy commit ref so browsers always get latest template.js
     const cacheBust = process.env.COMMIT_REF ? process.env.COMMIT_REF.slice(0, 8) : Date.now();
 
+    // The client-facing page must never see internal bookkeeping: supplier
+    // source prices, pre-markup baselines, or the markup itself (all visible
+    // via View Source otherwise). The template renders none of these.
+    const viewData = stripForDisplay(record.quoteData || {});
+    delete viewData.markup;
+
     // Serve a thin HTML shell that loads template.js and rewrites the page.
     // quote-modal.js (external static file) is loaded by the generated HTML —
     // no inline JS in the generated page so no template-literal escaping issues.
@@ -41,7 +54,7 @@ exports.handler = async (event) => {
 <title>IziTravel Quote — ${esc(record.clientName)} — ${esc(record.destination)}</title>
 </head>
 <body>
-<script id="quotePayload" type="application/json">${JSON.stringify({ quoteData: record.quoteData, logoBase64: logoUrl })}</script>
+<script id="quotePayload" type="application/json">${jsonForScript({ quoteData: viewData, logoBase64: logoUrl })}</script>
 <script src="${siteUrl}/js/template.js?v=${cacheBust}"></script>
 <script>
 (function(){

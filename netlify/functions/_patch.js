@@ -22,6 +22,11 @@ function parsePath(path) {
     const key = m[1];
     if (key) {
       if (BAD_KEYS.has(key)) return null;
+      // Internal bookkeeping is hidden from the model via stripForDisplay, so no
+      // legitimate op can target it. Reject such paths outright — otherwise a
+      // hallucinated (or prompt-injected) op could corrupt the price-integrity
+      // baseline or retag the record.
+      if (key.charAt(0) === '_' || key === 'recordType') return null;
       segs.push(key);
     }
     const idxBlock = m[2];
@@ -61,6 +66,9 @@ function applyOps(obj, ops) {
       if (parent == null) { failed.push(op); continue; }
 
       if (action === 'set') {
+        // Setting past the end of an array leaves holes that serialize to null
+        // and break rendering — allow at most an append at index === length.
+        if (Array.isArray(parent) && typeof last === 'number' && last > parent.length) { failed.push(op); continue; }
         parent[last] = op.value;
         appliedPaths.push(op.path);
       } else if (action === 'append') {

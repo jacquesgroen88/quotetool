@@ -34,7 +34,11 @@ exports.handler = async (event) => {
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { body = {}; }
 
-  const adminPass = process.env.ADMIN_PASSWORD || 'Reviewtap';
+  // Fail closed: no fallback password — this repo is public (see admin-quotes.js).
+  const adminPass = process.env.ADMIN_PASSWORD;
+  if (!adminPass) {
+    return { statusCode: 500, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'ADMIN_PASSWORD is not configured on the server.' }) };
+  }
   if (!body.password || body.password !== adminPass) {
     return {
       statusCode: 401,
@@ -46,6 +50,16 @@ exports.handler = async (event) => {
   // Delete a specific quote by ID
   if (body.quoteId) {
     try {
+      // Only delete records this tool created — the storage token may have
+      // access to other gists, and a raw ID would otherwise delete anything.
+      const rec = await store.getJSON(body.quoteId);
+      if (!rec || (!rec.quoteData && !rec.recordType)) {
+        return {
+          statusCode: 404,
+          headers: { ...cors, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ error: 'Not a quote-tool record.', quoteId: body.quoteId }),
+        };
+      }
       const deleted = await store.removeRecord(body.quoteId);
       return {
         statusCode: 200,

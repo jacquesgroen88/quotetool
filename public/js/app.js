@@ -93,7 +93,7 @@ const App = (() => {
     state.quoteData = prev;
     updateUndoBtn();
     refreshPreview();
-    if (state.editQuoteId) saveQuoteLink(state.quoteData, true);
+    saveQuoteLink(state.quoteData, true); // serialized — queues if the first save is still in flight
     addChatMsg('ai', '↩ Reverted to the previous version.');
   }
 
@@ -109,15 +109,15 @@ const App = (() => {
     // Snapshot the pre-markup ("base"/supplier) prices ONCE, so markup is always
     // relative to the original: re-applying replaces rather than compounds, and
     // entering 0 restores the supplier prices. Also lets the admin show base → marked-up.
-    if (!Array.isArray(updated._baseOptions)) {
+    // Re-snapshot if the option count changed (option added/removed via chat
+    // edit) so base prices stay index-aligned with the live options.
+    if (!Array.isArray(updated._baseOptions) || updated._baseOptions.length !== (updated.options || []).length) {
       updated._baseOptions = (updated.options || []).map(o => ({
         optionNumber:   o.optionNumber,
         pricePerPerson: o.pricePerPerson,
         totalPrice:     o.totalPrice,
       }));
     }
-    const baseByNum = {};
-    updated._baseOptions.forEach(b => { baseByNum[b.optionNumber] = b; });
 
     const multiplier = 1 + pct / 100;
     function markupFrom(priceStr) {
@@ -127,8 +127,11 @@ const App = (() => {
       return 'R' + Math.round(num * multiplier).toLocaleString('en-ZA');
     }
 
-    updated.options = (updated.options || []).map(opt => {
-      const base = baseByNum[opt.optionNumber] || opt;
+    // Key by array index, NOT optionNumber — the AI doesn't always emit
+    // optionNumber, and a missing/duplicate number made every option take the
+    // last option's base price.
+    updated.options = (updated.options || []).map((opt, i) => {
+      const base = updated._baseOptions[i] || opt;
       return {
         ...opt,
         pricePerPerson: markupFrom(base.pricePerPerson),
@@ -141,7 +144,7 @@ const App = (() => {
 
     state.quoteData = updated;
     refreshPreview();
-    if (state.editQuoteId) saveQuoteLink(state.quoteData, true);
+    saveQuoteLink(state.quoteData, true); // serialized — queues if the first save is still in flight
 
     const btn = $('markup-apply-btn');
     if (btn) { btn.textContent = pct > 0 ? '✓ Applied!' : '✓ Reset'; setTimeout(() => { btn.textContent = 'Apply Markup'; }, 2000); }
@@ -186,7 +189,9 @@ const App = (() => {
       if (data.clientName  && !$('f-clientName').value)  $('f-clientName').value  = data.clientName;
       if (data.destination && !$('f-destination').value) $('f-destination').value = data.destination;
       if (data.dates       && !$('f-dates').value)       $('f-dates').value       = data.dates;
-      if (data.adults      && !$('f-adults').value)      $('f-adults').value       = data.adults;
+      // f-adults is a <select> that always has a value ("2" default), so an
+      // emptiness guard would never apply the detected count — validate instead.
+      if (data.adults) { const el = $('f-adults'); const v = String(data.adults); if (el && [...el.options].some(o => o.value === v)) el.value = v; }
       if (data.occasion    && !$('f-occasion').value)    $('f-occasion').value    = data.occasion;
       $('detect-status').textContent = 'Details detected — please review below.';
       $('detect-status').className   = 'detect-status success';
@@ -233,6 +238,8 @@ const App = (() => {
 
       {
         const qd = json.result;
+        // Stable quote reference — generated once here, not per page view.
+        if (!qd.quoteRef) qd.quoteRef = 'IZI-' + Date.now().toString(36).toUpperCase().slice(-6);
         if (clientDetails.clientTitle)   qd.clientTitle   = clientDetails.clientTitle;
         if (clientDetails.children)      qd.children      = clientDetails.children;
         if (clientDetails.personalNote)  qd.personalNote  = clientDetails.personalNote;
@@ -258,8 +265,15 @@ const App = (() => {
   }
 
   // ── Quote link ─────────────────────────────────────────────────────────────
-  // silent=true — used when auto-saving after edits; doesn't reset the link UI
+  // silent=true — used when auto-saving after edits; doesn't reset the link UI.
+  // Saves are serialized: if one is in flight, the request is queued and re-run
+  // with the LATEST quoteData once it completes. Without this, edits made while
+  // the first save is still returning (markup right after generate is the
+  // natural workflow) never reached the share link the client opens.
+  let saveInFlight = false, saveQueued = false;
   async function saveQuoteLink(quoteData, silent = false) {
+    if (saveInFlight) { saveQueued = true; return; }
+    saveInFlight = true;
     try {
       if (!silent) setQuoteLink(null); // show "Generating link…" for new saves only
       const body = { quoteData, logoBase64: state.logoBase64 };
@@ -273,14 +287,18 @@ const App = (() => {
       let data = {};
       try { data = await res.json(); } catch { data = { error: `HTTP ${res.status} — non-JSON response` }; }
       if (data.quoteUrl) {
+        const urlChanged  = state.quoteUrl !== data.quoteUrl;
         state.quoteUrl    = data.quoteUrl;
         state.editQuoteId = data.quoteId;   // store UUID for subsequent updates
-        if (!silent) setQuoteLink(data.quoteUrl);
+        if (!silent || urlChanged) setQuoteLink(data.quoteUrl);
       } else {
         if (!silent) setQuoteLinkError(data.error || `HTTP ${res.status} — no URL returned`);
       }
     } catch (err) {
       if (!silent) setQuoteLinkError((err && (err.message || String(err))) || 'Network error');
+    } finally {
+      saveInFlight = false;
+      if (saveQueued) { saveQueued = false; saveQuoteLink(state.quoteData, true); }
     }
   }
 
@@ -452,7 +470,7 @@ const App = (() => {
       addChatMsg('ai', result.changes || 'Done — quote updated.');
       refreshPreview();
       // Auto-save updated quote silently (so client link stays current)
-      if (state.editQuoteId) saveQuoteLink(state.quoteData, true);
+      saveQuoteLink(state.quoteData, true); // serialized — queues if the first save is still in flight
     } catch (err) {
       addChatMsg('ai', '⚠️ Sorry, I couldn\'t apply that change: ' + (err.message || 'Unknown error'));
     } finally {
@@ -616,6 +634,7 @@ const App = (() => {
       state.quoteData = null;
       state.quoteUrl = null;
       state.editQuoteId = null;
+      state.leadContactId = null; // else the NEXT quote's "mark as sent" hits the OLD lead's CRM card
       state.chatMessages = [];
       state.quoteHistory = [];
       updateUndoBtn();

@@ -120,8 +120,16 @@ Agent instruction: "${message}"`;
 
     const changes = result.changes || 'Confirmation updated.';
     if (Array.isArray(result.ops) && result.ops.length) {
-      const { applied } = applyOps(merged, result.ops);
+      const { applied, appliedPaths } = applyOps(merged, result.ops);
       if (!applied) throw new Error("I couldn't apply that change — please rephrase or be more specific.");
+      // An edit that touches pricing invalidates the markup baseline — otherwise
+      // a later "Apply Markup" recomputes from the stale base and silently
+      // reverts the edited figure (mirrors edit.js's _baseOptions invalidation).
+      if (merged.pricing && appliedPaths.some(p => String(p).startsWith('pricing'))) {
+        delete merged.pricing._baseAll;
+        delete merged.pricing._baseTotal;
+        delete merged.pricing._basePerPerson;
+      }
     } else if (result.data && typeof result.data === 'object') {
       // Backward-compatible fallback: model returned a full object instead of ops.
       const clean = stripForDisplay(result.data);

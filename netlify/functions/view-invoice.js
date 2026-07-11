@@ -1,4 +1,11 @@
 const store = require('./_store');
+const { stripForDisplay } = require('./_patch');
+
+// JSON destined for a <script> block: JSON.stringify does not escape "<", so a
+// stored string containing "</script>" would break out of the tag. Escape it.
+function jsonForScript(obj) {
+  return JSON.stringify(obj).replace(/</g, '\\u003c');
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -12,7 +19,7 @@ exports.handler = async (event) => {
     const cacheBust = process.env.COMMIT_REF ? process.env.COMMIT_REF.slice(0, 8) : Date.now();
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>IziTravel Invoice — ${esc(record.clientName)}</title></head><body>
-<script id="invoicePayload" type="application/json">${JSON.stringify({ invoiceData: record.invoiceData, logoBase64: logoUrl })}</script>
+<script id="invoicePayload" type="application/json">${jsonForScript({ invoiceData: stripForDisplay(record.invoiceData || {}), logoBase64: logoUrl })}</script>
 <script src="${siteUrl}/js/invoice-template.js?v=${cacheBust}"></script>
 <script>(function(){var p=JSON.parse(document.getElementById('invoicePayload').textContent);var h=buildInvoiceHTML(p.invoiceData,p.logoBase64);document.open();document.write(h);document.close();})();</script>
 </body></html>`;

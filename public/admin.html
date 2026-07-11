@@ -320,11 +320,11 @@ async function loadAll(isLogin){
   const [conf, inv, leads] = await Promise.all([
     postList('/.netlify/functions/admin-confirmations','confirmations'),
     postList('/.netlify/functions/list-invoices','invoices'),
-    fetch('/.netlify/functions/list-leads').then(r=>r.json()).then(d=>({rows:d.leads||[]})).catch(()=>({rows:[]})),
+    postList('/.netlify/functions/list-leads','leads'),
   ]);
   DATA.confirmations = conf.rows;
   DATA.invoices = inv.rows;
-  DATA.leads = leads.rows;
+  DATA.leads = leads.rows || [];
 
   renderTabs();
   render();

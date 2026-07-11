@@ -139,10 +139,21 @@ function btnsHtml(l){
     +'</div>';
 }
 
+function getPw(){
+  let pw=localStorage.getItem('izi_admin_pw')||'';
+  if(!pw){
+    pw=(prompt('Enter the admin password to view leads:')||'').trim();
+    if(pw) localStorage.setItem('izi_admin_pw',pw);
+  }
+  return pw;
+}
 async function load(){
   $('content').innerHTML='<div class="state"><div class="spin"></div>Loading leads from your CRM…</div>';
   try{
-    const res=await fetch('/.netlify/functions/list-leads');
+    const pw=getPw();
+    if(!pw){ $('content').innerHTML='<div class="state"><h3>Password required</h3>Click Refresh to try again.</div>'; return; }
+    const res=await fetch('/.netlify/functions/list-leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    if(res.status===401){ localStorage.removeItem('izi_admin_pw'); $('content').innerHTML='<div class="state"><h3>Wrong password</h3>Click Refresh to try again.</div>'; return; }
     const data=await res.json();
     if(data.ghl==='disabled'){
       $('subhead').textContent='CRM not connected yet';

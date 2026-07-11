@@ -24,7 +24,12 @@ exports.handler = async (event) => {
 
   try {
     const { password } = JSON.parse(event.body || '{}');
-    const adminPass = process.env.ADMIN_PASSWORD || 'Reviewtap';
+    // Fail closed: no fallback password — this repo is public, so any default
+    // committed here is a published credential. Set ADMIN_PASSWORD in Netlify.
+    const adminPass = process.env.ADMIN_PASSWORD;
+    if (!adminPass) {
+      return { statusCode: 500, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'ADMIN_PASSWORD is not configured on the server.' }) };
+    }
 
     if (!password || password !== adminPass) {
       return {

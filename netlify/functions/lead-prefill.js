@@ -49,9 +49,16 @@ exports.handler = async (event) => {
 
     // Advance the opportunity — Terri has opened this lead to quote it.
     // Skip when ?noadvance=1 (e.g. prefilling the confirmation tool, where the
-    // deal is already past quoting and shouldn't be moved back).
+    // deal is already past quoting and shouldn't be moved back). Only advance
+    // from New Enquiry (or no opp yet) — never regress a later-stage deal back
+    // to Quote Requested just because the quote link was opened again.
     if (!event.queryStringParameters?.noadvance) {
-      await ghl.moveToStage({ contactId: cid, name: prefill.clientName || 'Travel enquiry', stageId: ghl.STAGES.quoteRequested });
+      try {
+        const opp = await ghl.findOpportunity(cid);
+        if (!opp || opp.pipelineStageId === ghl.STAGES.newEnquiry) {
+          await ghl.moveToStage({ contactId: cid, name: prefill.clientName || 'Travel enquiry', stageId: ghl.STAGES.quoteRequested });
+        }
+      } catch {}
     }
 
     return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ prefill }) };

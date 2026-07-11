@@ -50,12 +50,21 @@ function buildFilename(data) {
   return parts.join(' - ') + '.html';
 }
 
+// Deterministic ref for quotes saved before quoteRef was stored — derived from
+// content so the client sees the SAME ref on every page view.
+function legacyQuoteRef(data) {
+  const s = [data.clientName, data.destination, data.dates].join('|');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h.toString(36).toUpperCase().padStart(6, '0').slice(-6);
+}
+
 function buildQuoteHTML(data, logoBase64) {
   const heroImg    = getHeroImage(data.destination);
-  const quoteRef   = 'IZI-' + Date.now().toString(36).toUpperCase().slice(-6);
+  const quoteRef   = data.quoteRef || ('IZI-' + legacyQuoteRef(data));
   const dest       = data.destination || '';
   const adults     = data.adults ? `${data.adults} Adult${data.adults === '1' ? '' : 's'}` : '2 Adults';
-  const childrenTxt = data.children && data.children !== '0' ? ` · ${data.children} Child${data.children === '1' ? '' : 'ren'}` : '';
+  const childrenTxt = data.children && data.children !== '0' ? ` · ${esc(data.children)} Child${data.children === '1' ? '' : 'ren'}` : '';
   const dates      = data.dates || '';
   const occasion   = data.occasion || '';
   const validity   = data.quoteValidity || '48';
@@ -193,6 +202,7 @@ function buildQuoteHTML(data, logoBase64) {
     : '';
 
   // ── Embedded JS payload data (safe JSON in script tag) ──
+  // <-escape so a "</script>" inside any string can't break out of the tag.
   const embedData = JSON.stringify({
     quoteRef,
     clientName,
@@ -203,7 +213,7 @@ function buildQuoteHTML(data, logoBase64) {
     agentEmail: AGENT_EMAIL,
     webhookUrl: WEBHOOK_URL,
     waNumber:   AGENT_WA,
-  });
+  }).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
 <html lang="en">

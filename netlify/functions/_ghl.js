@@ -130,7 +130,14 @@ async function moveToStage({ contactId, name, stageId, status, monetaryValue }) 
   try {
     const opp = await findOpportunity(contactId);
     if (opp && opp.id) {
-      await updateOpportunity(opp.id, { stageId, status, monetaryValue });
+      // GHL's opportunity PUT is destructive — omitted fields get wiped.
+      // Merge the existing opp's values for anything the caller didn't set.
+      await updateOpportunity(opp.id, {
+        stageId,
+        status: status || opp.status,
+        name: name || opp.name,
+        monetaryValue: monetaryValue != null ? monetaryValue : opp.monetaryValue,
+      });
       return { ok: true, oppId: opp.id, created: false };
     }
     const r = await createOpportunity({ contactId, name, stageId, status: status || 'open', monetaryValue });

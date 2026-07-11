@@ -34,7 +34,9 @@ exports.handler = async (event) => {
 
   try {
     const record = await store.getJSON(quoteId);
-    if (!record) {
+    // A confirmation/invoice ID pasted here must 404, not load a shell record
+    // (quotes have no recordType tag; the other tools' records do).
+    if (!record || (record.recordType && record.recordType !== 'quote')) {
       return {
         statusCode: 404,
         headers: { ...cors, 'Content-Type': 'application/json' },

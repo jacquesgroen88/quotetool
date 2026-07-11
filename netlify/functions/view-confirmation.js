@@ -1,4 +1,11 @@
 const store = require('./_store');
+const { stripForDisplay } = require('./_patch');
+
+// JSON destined for a <script> block: JSON.stringify does not escape "<", so a
+// stored string containing "</script>" would break out of the tag. Escape it.
+function jsonForScript(obj) {
+  return JSON.stringify(obj).replace(/</g, '\\u003c');
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -18,6 +25,11 @@ exports.handler = async (event) => {
     const logoUrl   = `${siteUrl}/assets/izilogo.jpg`;
     const cacheBust = process.env.COMMIT_REF ? process.env.COMMIT_REF.slice(0, 8) : Date.now();
 
+    // Never expose internal bookkeeping (supplier prices, markup baseline/pct)
+    // to the client-facing page — it's all readable via View Source otherwise.
+    const viewData = stripForDisplay(record.confirmationData || {});
+    if (viewData.pricing) delete viewData.pricing.markupPct;
+
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,7 +38,7 @@ exports.handler = async (event) => {
 <title>IziTravel Confirmation — ${esc(record.clientName)} — ${esc(record.destination)}</title>
 </head>
 <body>
-<script id="confirmationPayload" type="application/json">${JSON.stringify({ confirmationData: record.confirmationData, logoBase64: logoUrl })}</script>
+<script id="confirmationPayload" type="application/json">${jsonForScript({ confirmationData: viewData, logoBase64: logoUrl })}</script>
 <script src="${siteUrl}/js/confirmation-template.js?v=${cacheBust}"></script>
 <script>
 (function(){

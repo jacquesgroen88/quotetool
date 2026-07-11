@@ -6,6 +6,12 @@
   var selOpt = null;
   var origModalBody = null;
 
+  function escHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
   function init() {
     var dataEl = document.getElementById('embedData');
     if (!dataEl) return;
@@ -36,7 +42,8 @@
     try { selOpt = JSON.parse(btn.getAttribute('data-opt')); } catch (e) { return; }
     var lbl = selOpt.resortName + (selOpt.roomType ? ' · ' + selOpt.roomType : '');
     var chosenEl = document.getElementById('chosenLbl');
-    if (chosenEl) chosenEl.innerHTML = 'You selected: <strong>' + lbl + '</strong>';
+    // Escape: resort/room names come from AI-extracted supplier text.
+    if (chosenEl) chosenEl.innerHTML = 'You selected: <strong>' + escHtml(lbl) + '</strong>';
     var nameEl = document.getElementById('mName');
     if (nameEl) nameEl.value = '';
     var bg = document.getElementById('modalBg');
@@ -68,8 +75,9 @@
     if (!name || !email) { alert('Please enter your name and email address.'); return; }
     var btn = document.getElementById('mSubmit');
     if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+    var ok = false;
     try {
-      await fetch(ED.webhookUrl, {
+      var res = await fetch(ED.webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,15 +94,23 @@
           message: msg,
         }),
       });
-    } catch (e) {}
+      ok = !!(res && res.ok);
+    } catch (e) { ok = false; }
+    // Never show success when the send failed — the agent would never hear
+    // about the acceptance while the client believes they've confirmed.
+    if (!ok) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Try Again'; }
+      alert("We couldn't send your selection just now. Please try again, or WhatsApp us on " + (ED.agentPhone || '') + '.');
+      return;
+    }
     var firstName = name.split(' ')[0];
     var body = document.getElementById('modalBody');
     if (body) {
       body.innerHTML =
         "<div class='msuccess'><div class='tick'>&#127881;</div>" +
-        "<h4>You're all set, " + firstName + "!</h4>" +
+        "<h4>You're all set, " + escHtml(firstName) + "!</h4>" +
         "<p>We've received your selection and our travel agent will be in touch with you <strong>shortly</strong> to confirm.<br><br>" +
-        "In the meantime, WhatsApp us on <strong>" + (ED.agentPhone || '') + "</strong>.</p></div>";
+        "In the meantime, WhatsApp us on <strong>" + escHtml(ED.agentPhone || '') + "</strong>.</p></div>";
     }
     document.body.style.overflow = '';
   }

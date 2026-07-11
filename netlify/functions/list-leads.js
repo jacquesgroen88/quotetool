@@ -15,8 +15,23 @@ try {
 const GHL_APP = process.env.GHL_APP || 'https://app.reviewtap.co.za';
 
 exports.handler = async (event) => {
-  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
+  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors, body: '' };
+  if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
+
+  // This endpoint returns client PII for the whole open pipeline — gate it with
+  // the same password as the admin endpoints. Fail closed (public repo — a
+  // fallback password here would be a published credential).
+  let password = '';
+  try { password = JSON.parse(event.body || '{}').password || ''; } catch {}
+  const adminPass = process.env.ADMIN_PASSWORD;
+  if (!adminPass) {
+    return { statusCode: 500, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'ADMIN_PASSWORD is not configured on the server.' }) };
+  }
+  if (!password || password !== adminPass) {
+    return { statusCode: 401, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid password' }) };
+  }
+
   if (!ghl.enabled()) return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ leads: [], ghl: 'disabled' }) };
 
   const STAGE_NAME = {
@@ -47,7 +62,11 @@ exports.handler = async (event) => {
       });
       const g = (k) => cf['contact.' + k] || '';
       const departureDate = g('departure_date'), returnDate = g('return_date');
-      const daysUntil = departureDate ? (new Date(departureDate) - now) / 86400000 : null;
+      // Calendar-day compare in SAST (UTC+2): "departs today" must stay urgent
+      // all day, and an unparseable date must not silently drop the flag path.
+      const todayDay = Math.floor((now.getTime() + 2 * 3600e3) / 86400000);
+      const depMs = departureDate ? Date.parse(departureDate) : NaN;
+      const daysUntil = isNaN(depMs) ? null : Math.floor(depMs / 86400000) - todayDay;
       const urgent = daysUntil != null && daysUntil >= 0 && daysUntil <= 30;
       const tags = (contact && contact.tags) || (o.contact && o.contact.tags) || [];
 
