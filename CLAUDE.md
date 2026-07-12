@@ -82,7 +82,8 @@ The `.env` is gitignored and auto-loaded by the functions via a built-in loader 
 | Variable | Where to set | Purpose |
 |---|---|---|
 | `OPENROUTER_API_KEY` | `.env` locally, Netlify dashboard in prod | AI API calls via OpenRouter |
-| `ADMIN_PASSWORD` | `.env` locally, Netlify dashboard in prod | Protects `/admin.html`, `/leads.html` and all listing endpoints. REQUIRED — the functions fail closed without it. Never write the actual value in this repo (it is PUBLIC). |
+| `ADMIN_PASSWORD` | `.env` locally, Netlify dashboard in prod | Legacy shared credential for `/admin.html`, `/leads.html` and all listing endpoints. Listing endpoints fail closed unless this OR `AGENTS` is set. Never write the actual value in this repo (it is PUBLIC). |
+| `AGENTS` | Netlify dashboard | Per-person PINs as a JSON map, e.g. `{"terri":"482913","jacques":"175064"}`. When set: (1) every save/mark write requires a valid PIN (the apps prompt ONCE per device and remember it); (2) records get `createdBy` + an `_activity` history (created/edited/markup_applied/marked_sent) shown in the admin "By" column + hover; (3) a PIN also unlocks the admin/leads pages, so the shared password can be retired. While unset, writes work anonymously exactly as before. Never commit PIN values. |
 
 **In Netlify dashboard:** Site configuration → Environment variables → Add variable
 

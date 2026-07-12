@@ -89,6 +89,7 @@ body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-
   </div>
 </main>
 
+<script src="/js/agent.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -140,10 +141,10 @@ function btnsHtml(l){
 }
 
 function getPw(){
-  let pw=localStorage.getItem('izi_admin_pw')||'';
+  let pw=window.IziAgent.getPin();
   if(!pw){
-    pw=(prompt('Enter the admin password to view leads:')||'').trim();
-    if(pw) localStorage.setItem('izi_admin_pw',pw);
+    pw=(prompt('Enter your personal PIN (or the admin password) to view leads:')||'').trim();
+    if(pw) window.IziAgent.setPin(pw);
   }
   return pw;
 }
@@ -153,7 +154,7 @@ async function load(){
     const pw=getPw();
     if(!pw){ $('content').innerHTML='<div class="state"><h3>Password required</h3>Click Refresh to try again.</div>'; return; }
     const res=await fetch('/.netlify/functions/list-leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
-    if(res.status===401){ localStorage.removeItem('izi_admin_pw'); $('content').innerHTML='<div class="state"><h3>Wrong password</h3>Click Refresh to try again.</div>'; return; }
+    if(res.status===401){ window.IziAgent.clearPin(); $('content').innerHTML='<div class="state"><h3>Wrong PIN / password</h3>Click Refresh to try again.</div>'; return; }
     const data=await res.json();
     if(data.ghl==='disabled'){
       $('subhead').textContent='CRM not connected yet';

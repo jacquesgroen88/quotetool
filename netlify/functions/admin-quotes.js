@@ -1,4 +1,5 @@
-const store = require('./_store');
+const store  = require('./_store');
+const agents = require('./_agents');
 const fs   = require('fs');
 const path = require('path');
 
@@ -24,14 +25,14 @@ exports.handler = async (event) => {
 
   try {
     const { password } = JSON.parse(event.body || '{}');
-    // Fail closed: no fallback password — this repo is public, so any default
-    // committed here is a published credential. Set ADMIN_PASSWORD in Netlify.
-    const adminPass = process.env.ADMIN_PASSWORD;
-    if (!adminPass) {
-      return { statusCode: 500, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'ADMIN_PASSWORD is not configured on the server.' }) };
+    // Accepts a personal PIN (AGENTS env) or the shared ADMIN_PASSWORD.
+    // Fail closed when neither is configured — this repo is public, so any
+    // default committed here is a published credential.
+    const cred = agents.checkCredential(password);
+    if (!cred.configured) {
+      return { statusCode: 500, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'No ADMIN_PASSWORD or AGENTS configured on the server.' }) };
     }
-
-    if (!password || password !== adminPass) {
+    if (!cred.ok) {
       return {
         statusCode: 401,
         headers: { ...cors, 'Content-Type': 'application/json' },
@@ -54,6 +55,8 @@ exports.handler = async (event) => {
             destination: record.destination || 'Unknown',
             dates:       record.dates       || '',
             createdAt:   record.createdAt   || '',
+            createdBy:   record.createdBy   || '',
+            activity:    (record._activity  || []).slice(-10),
             quoteUrl:    `${siteUrl}/.netlify/functions/view-quote?id=${key}`,
             optionCount: record.quoteData?.options?.length || 0,
             options:     (record.quoteData?.options || []).map(o => ({

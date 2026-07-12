@@ -1,4 +1,6 @@
-const ghl  = require('./_ghl');
+const ghl    = require('./_ghl');
+const store  = require('./_store');
+const agents = require('./_agents');
 const fs   = require('fs');
 const path = require('path');
 
@@ -21,7 +23,23 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
 
   try {
-    const { contactId, value, quoteUrl, name } = JSON.parse(event.body || '{}');
+    const { contactId, value, quoteUrl, name, pin, quoteId } = JSON.parse(event.body || '{}');
+    const agent = agents.agentForPin(pin);
+    if (agents.pinRequired() && !agent) {
+      return { statusCode: 401, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid PIN' }) };
+    }
+
+    // Record who marked it sent on the quote's own history (best-effort).
+    if (quoteId) {
+      try {
+        const rec = await store.getJSON(quoteId);
+        if (rec && rec.quoteData) {
+          agents.appendActivity(rec, 'marked_sent', agent);
+          await store.setJSON(quoteId, rec);
+        }
+      } catch {}
+    }
+
     if (!ghl.enabled() || !contactId) {
       return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: false, skipped: true }) };
     }
@@ -36,7 +54,7 @@ exports.handler = async (event) => {
     if (band) await ghl.setContactField(contactId, ghl.FIELDS.quoteValueBand, band);
 
     if (quoteUrl) {
-      await ghl.addNote(contactId, `📄 Quote sent to client — ${quoteUrl}`);
+      await ghl.addNote(contactId, `📄 Quote sent to client${agent ? ` by ${agent}` : ''} — ${quoteUrl}`);
       await ghl.setContactField(contactId, ghl.FIELDS.proposalLink, quoteUrl); // for the Leads → Quoted view
     }
     return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, value: monetaryValue }) };

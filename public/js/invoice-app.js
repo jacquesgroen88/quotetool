@@ -62,9 +62,12 @@
 
   function markInvoiced(data) {
     if (!state.leadContactId) return;
-    fetch('/.netlify/functions/mark-invoiced', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contactId: state.leadContactId, total: totalNum(data), invoiceUrl: state.invoiceUrl, name: [data.clientName, data.destination].filter(Boolean).join(' - ') }),
+    window.IziAgent.agentFetch('/.netlify/functions/mark-invoiced', {
+      contactId: state.leadContactId,
+      invoiceId: state.invoiceId,
+      total: totalNum(data),
+      invoiceUrl: state.invoiceUrl,
+      name: [data.clientName, data.destination].filter(Boolean).join(' - '),
     }).catch(() => {});
   }
 
@@ -115,7 +118,7 @@
       const body = { invoiceData: data, logoBase64: state.logoBase64 };
       if (state.invoiceId) body.invoiceId = state.invoiceId;
       if (state.leadContactId) body.contactId = state.leadContactId;
-      const res = await fetch('/.netlify/functions/save-invoice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const res = await window.IziAgent.agentFetch('/.netlify/functions/save-invoice', body);
       const j = await res.json();
       if (j.invoiceUrl) { state.invoiceUrl = j.invoiceUrl; state.invoiceId = j.invoiceId; renderLinks(j.invoiceUrl, data); }
       else renderSaveFailed(data);

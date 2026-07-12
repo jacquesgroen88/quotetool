@@ -173,6 +173,7 @@ tbody td{padding:13px 16px;font-size:13.5px;color:var(--gray-700);vertical-align
   </div>
 </div>
 
+<script src="/js/agent.js"></script>
 <script>
 let adminPassword = '';
 let activeTab = 'quotes';
@@ -188,6 +189,11 @@ function contactCell(phone,email){
   return bits.length ? `<div class="td-contact">${bits.join('<br>')}</div>` : '<span class="td-date">—</span>';
 }
 function viewAct(url){ return url ? `<a class="act act-primary" href="${esc(url)}" target="_blank">View ↗</a>` : ''; }
+function agentName(a){ return a ? a.charAt(0).toUpperCase()+a.slice(1) : '—'; }
+function byCell(r){
+  const hist = (r.activity||[]).map(e => `${e.agent||'?'} — ${e.event}${e.n>1?' ×'+e.n:''} — ${fmtDate(e.at)}`).join('\n');
+  return `<td class="td-date" title="${esc(hist||'No history recorded')}">${esc(agentName(r.createdBy))}</td>`;
+}
 function copyAct(url){ return url ? `<button class="act act-ghost" onclick="copyLink('${esc(url)}',this)">Copy</button>` : ''; }
 // Create a confirmation from a quote — prefills the override fields; cid carries
 // the CRM contact so sending moves the deal to Booking Confirmation Sent.
@@ -206,16 +212,17 @@ const TABS = {
       ['Today', rows.filter(isToday).length],
       ['Destinations', new Set(rows.map(r=>r.destination).filter(Boolean)).size],
     ],
-    head: ['Client','Destination','Options','Contact','Created','Actions'],
+    head: ['Client','Destination','Options','Contact','By','Created','Actions'],
     row: q => `
       <td class="td-name">${esc(q.clientName)}</td>
       <td>${destCell(q.destination)}</td>
       <td><span class="pill">${q.optionCount||0} option${q.optionCount!==1?'s':''}</span>${(q.markup&&q.markup.pct)?`<span class="pill margin">+${esc(String(q.markup.pct))}%</span>`:''}</td>
       <td>${contactCell(q.phone,q.email)}</td>
+      ${byCell(q)}
       <td class="td-date">${fmtDate(q.createdAt)}</td>
       <td><div class="td-actions">${viewAct(q.quoteUrl)}<a class="act act-ghost" href="/?edit=${esc(q.quoteId)}" target="_blank">Edit ✏</a><a class="act act-ghost" href="${confLink(q)}" target="_blank" title="Create a branded booking confirmation prefilled with this client">Confirm →</a>${copyAct(q.quoteUrl)}</div></td>`,
-    csv: { headers:['Client','Destination','Options','Markup %','Phone','Email','Created','URL'],
-      row:q=>[q.clientName,q.destination,q.optionCount,(q.markup&&q.markup.pct)||'',q.phone,q.email,q.createdAt?new Date(q.createdAt).toLocaleString('en-ZA'):'',q.quoteUrl] },
+    csv: { headers:['Client','Destination','Options','Markup %','Phone','Email','By','Created','URL'],
+      row:q=>[q.clientName,q.destination,q.optionCount,(q.markup&&q.markup.pct)||'',q.phone,q.email,q.createdBy||'',q.createdAt?new Date(q.createdAt).toLocaleString('en-ZA'):'',q.quoteUrl] },
   },
   confirmations: {
     label: 'Confirmations', idField: 'confirmationId', nameField: 'clientName',
@@ -226,13 +233,14 @@ const TABS = {
       ['Today', rows.filter(isToday).length],
       ['Destinations', new Set(rows.map(r=>r.destination).filter(Boolean)).size],
     ],
-    head: ['Client','Destination','Resort','Total','Pax','Created','Actions'],
+    head: ['Client','Destination','Resort','Total','Pax','By','Created','Actions'],
     row: c => `
       <td class="td-name">${esc(c.clientName)}</td>
       <td>${destCell(c.destination)}</td>
       <td>${esc(c.resort)||'—'}</td>
       <td class="td-money">${esc(c.total)||'—'}${c.markup?`<span class="pill margin">+${esc(String(c.markup))}%</span>`:''}</td>
       <td>${c.paxCount?`<span class="pill">${esc(String(c.paxCount))}</span>`:'—'}</td>
+      ${byCell(c)}
       <td class="td-date">${fmtDate(c.createdAt)}</td>
       <td><div class="td-actions">${viewAct(c.viewUrl)}<a class="act act-ghost" href="${invLink(c)}" target="_blank" title="Create a tax invoice prefilled from this confirmation">Invoice →</a>${copyAct(c.viewUrl)}</div></td>`,
     csv: { headers:['Client','Destination','Resort','Total','Deposit','Balance','Pax','Created','URL'],
@@ -247,13 +255,14 @@ const TABS = {
       ['Today', rows.filter(isToday).length],
       ['Clients', new Set(rows.map(r=>r.clientName).filter(Boolean)).size],
     ],
-    head: ['Client','Invoice No','Trip','Total','Due','Created','Actions'],
+    head: ['Client','Invoice No','Trip','Total','Due','By','Created','Actions'],
     row: i => `
       <td class="td-name">${esc(i.clientName)}</td>
       <td><span class="pill">${esc(i.invoiceNo)||'—'}</span></td>
       <td>${esc(i.destination)||'—'}</td>
       <td class="td-money">${esc(i.total)||'—'}</td>
       <td class="td-date">${esc(i.dueDate)||'—'}</td>
+      ${byCell(i)}
       <td class="td-date">${fmtDate(i.createdAt)}</td>
       <td><div class="td-actions">${viewAct(i.viewUrl)}${copyAct(i.viewUrl)}</div></td>`,
     csv: { headers:['Client','Invoice No','Trip','Total','Deposit','Balance','Due','Created','URL'],
@@ -310,8 +319,17 @@ async function postList(endpoint, key){
 async function loadAll(isLogin){
   // Validate password against quotes first.
   const q = await postList('/.netlify/functions/admin-quotes','quotes');
-  if (q.unauthorised) { document.getElementById('loginErr').style.display='block'; return; }
+  if (q.unauthorised) {
+    // Stored credential no longer valid (e.g. rotated) — forget it and show login.
+    window.IziAgent.clearPin();
+    document.getElementById('loginErr').style.display='block';
+    document.getElementById('loginView').style.display='block';
+    document.getElementById('dashView').style.display='none';
+    return;
+  }
 
+  // Remember the working credential so nobody logs in twice on the same device.
+  window.IziAgent.setPin(adminPassword);
   document.getElementById('loginErr').style.display='none';
   document.getElementById('loginView').style.display='none';
   document.getElementById('dashView').style.display='block';
@@ -417,6 +435,13 @@ function exportCSV(){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
+
+// Auto-login with the remembered credential — one login per device, ever.
+// If it was rotated, loadAll falls back to the login form and clears it.
+(function(){
+  const saved = window.IziAgent.getPin();
+  if (saved) { adminPassword = saved; loadAll(true); }
+})();
 </script>
 </body>
 </html>

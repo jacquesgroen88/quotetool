@@ -1,4 +1,6 @@
-const ghl  = require('./_ghl');
+const ghl    = require('./_ghl');
+const store  = require('./_store');
+const agents = require('./_agents');
 const fs   = require('fs');
 const path = require('path');
 
@@ -20,13 +22,29 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
 
   try {
-    const { contactId, total, confirmationUrl, name } = JSON.parse(event.body || '{}');
+    const { contactId, total, confirmationUrl, name, pin, confirmationId } = JSON.parse(event.body || '{}');
+    const agent = agents.agentForPin(pin);
+    if (agents.pinRequired() && !agent) {
+      return { statusCode: 401, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid PIN' }) };
+    }
+
+    // Record who marked it sent on the confirmation's own history (best-effort).
+    if (confirmationId) {
+      try {
+        const rec = await store.getJSON(confirmationId);
+        if (rec && rec.recordType === 'confirmation') {
+          agents.appendActivity(rec, 'marked_sent', agent);
+          await store.setJSON(confirmationId, rec);
+        }
+      } catch {}
+    }
+
     if (!ghl.enabled() || !contactId) {
       return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: false, skipped: true }) };
     }
     const monetaryValue = (total != null && !isNaN(total)) ? Math.round(Number(total)) : undefined;
     await ghl.moveToStage({ contactId, name: name || 'Booking', stageId: ghl.STAGES.bookingConfirmationSent, status: 'won', monetaryValue });
-    if (confirmationUrl) await ghl.addNote(contactId, `✅ Booking confirmation sent to client — ${confirmationUrl}`);
+    if (confirmationUrl) await ghl.addNote(contactId, `✅ Booking confirmation sent to client${agent ? ` by ${agent}` : ''} — ${confirmationUrl}`);
     return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true }) };
   } catch (err) {
     return { statusCode: 500, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: err.message || 'Failed.' }) };

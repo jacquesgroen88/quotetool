@@ -144,7 +144,7 @@ const App = (() => {
 
     state.quoteData = updated;
     refreshPreview();
-    saveQuoteLink(state.quoteData, true); // serialized — queues if the first save is still in flight
+    saveQuoteLink(state.quoteData, true, 'markup_applied'); // serialized — queues if the first save is still in flight
 
     const btn = $('markup-apply-btn');
     if (btn) { btn.textContent = pct > 0 ? '✓ Applied!' : '✓ Reset'; setTimeout(() => { btn.textContent = 'Apply Markup'; }, 2000); }
@@ -271,7 +271,7 @@ const App = (() => {
   // the first save is still returning (markup right after generate is the
   // natural workflow) never reached the share link the client opens.
   let saveInFlight = false, saveQueued = false;
-  async function saveQuoteLink(quoteData, silent = false) {
+  async function saveQuoteLink(quoteData, silent = false, activityHint = '') {
     if (saveInFlight) { saveQueued = true; return; }
     saveInFlight = true;
     try {
@@ -279,11 +279,8 @@ const App = (() => {
       const body = { quoteData, logoBase64: state.logoBase64 };
       if (state.editQuoteId)   body.quoteId   = state.editQuoteId; // update existing record
       if (state.leadContactId) body.contactId = state.leadContactId; // push stage back to GHL
-      const res = await fetch('/.netlify/functions/save-quote', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(body),
-      });
+      if (activityHint)        body.activity  = activityHint;       // e.g. 'markup_applied'
+      const res = await window.IziAgent.agentFetch('/.netlify/functions/save-quote', body);
       let data = {};
       try { data = await res.json(); } catch { data = { error: `HTTP ${res.status} — non-JSON response` }; }
       if (data.quoteUrl) {
@@ -365,14 +362,12 @@ const App = (() => {
     const doMark = !!state.leadContactId &&
       confirm('Mark this quote as “Sent” in CRM?\nMoves the lead to Quote Sent and sets the deal value to the average option price.');
     if (doMark) {
-      fetch('/.netlify/functions/mark-quote-sent', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contactId: state.leadContactId,
-          value:     avgOptionValue(),
-          quoteUrl:  state.quoteUrl,
-          name:      [(state.quoteData && state.quoteData.clientName) || '', (state.quoteData && state.quoteData.destination) || ''].filter(Boolean).join(' - '),
-        }),
+      window.IziAgent.agentFetch('/.netlify/functions/mark-quote-sent', {
+        contactId: state.leadContactId,
+        quoteId:   state.editQuoteId,
+        value:     avgOptionValue(),
+        quoteUrl:  state.quoteUrl,
+        name:      [(state.quoteData && state.quoteData.clientName) || '', (state.quoteData && state.quoteData.destination) || ''].filter(Boolean).join(' - '),
       }).catch(() => {});
     }
   }

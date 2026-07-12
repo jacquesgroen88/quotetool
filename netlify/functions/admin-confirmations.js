@@ -23,12 +23,12 @@ exports.handler = async (event) => {
 
   try {
     const { password } = JSON.parse(event.body || '{}');
-    // Fail closed: no fallback password — this repo is public (see admin-quotes.js).
-    const adminPass = process.env.ADMIN_PASSWORD;
-    if (!adminPass) {
-      return { statusCode: 500, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'ADMIN_PASSWORD is not configured on the server.' }) };
+    // Personal PIN or ADMIN_PASSWORD; fail closed when neither is configured (public repo).
+    const cred = require('./_agents').checkCredential(password);
+    if (!cred.configured) {
+      return { statusCode: 500, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'No ADMIN_PASSWORD or AGENTS configured on the server.' }) };
     }
-    if (!password || password !== adminPass) {
+    if (!cred.ok) {
       return { statusCode: 401, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid password' }) };
     }
 
@@ -47,6 +47,8 @@ exports.handler = async (event) => {
           destination: record.destination || cd.destination || 'Unknown',
           dates:       record.dates       || '',
           createdAt:   record.createdAt   || '',
+          createdBy:   record.createdBy   || '',
+          activity:    (record._activity  || []).slice(-10),
           viewUrl:     `${siteUrl}/.netlify/functions/view-confirmation?id=${key}`,
           bookingRef:  cd.bookingRef || '',
           resort:      cd.resort?.name || '',

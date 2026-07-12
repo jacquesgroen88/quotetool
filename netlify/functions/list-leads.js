@@ -20,15 +20,15 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
 
   // This endpoint returns client PII for the whole open pipeline — gate it with
-  // the same password as the admin endpoints. Fail closed (public repo — a
-  // fallback password here would be a published credential).
+  // a personal PIN (AGENTS env) or the shared ADMIN_PASSWORD. Fail closed when
+  // neither is configured (public repo — a fallback would be published).
   let password = '';
   try { password = JSON.parse(event.body || '{}').password || ''; } catch {}
-  const adminPass = process.env.ADMIN_PASSWORD;
-  if (!adminPass) {
-    return { statusCode: 500, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'ADMIN_PASSWORD is not configured on the server.' }) };
+  const cred = require('./_agents').checkCredential(password);
+  if (!cred.configured) {
+    return { statusCode: 500, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'No ADMIN_PASSWORD or AGENTS configured on the server.' }) };
   }
-  if (!password || password !== adminPass) {
+  if (!cred.ok) {
     return { statusCode: 401, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid password' }) };
   }
 

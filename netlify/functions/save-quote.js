@@ -1,5 +1,6 @@
-const store = require('./_store');
-const ghl   = require('./_ghl');
+const store  = require('./_store');
+const ghl    = require('./_ghl');
+const agents = require('./_agents');
 const { randomUUID } = require('crypto'); // built-in — no uuid package needed
 const fs   = require('fs');
 const path = require('path');
@@ -25,8 +26,14 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
 
   try {
-    const { quoteData, logoBase64, quoteId: existingId, contactId } = JSON.parse(event.body);
+    const { quoteData, logoBase64, quoteId: existingId, contactId, pin, activity } = JSON.parse(event.body);
     if (!quoteData) throw new Error('quoteData is required');
+
+    // Who is doing this? Enforced only once AGENTS is configured in Netlify.
+    const agent = agents.agentForPin(pin);
+    if (agents.pinRequired() && !agent) {
+      return { statusCode: 401, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Invalid PIN' }) };
+    }
 
     // existingId is a gist ID for updates, or undefined for new quotes
     const inputId = existingId || randomUUID();
@@ -36,6 +43,7 @@ exports.handler = async (event) => {
       quoteData,
       logoBase64: logoBase64 || null,
       createdAt:  new Date().toISOString(),
+      createdBy:  agent || null,
       clientName:  quoteData.clientName  || 'Unknown',
       destination: quoteData.destination || 'Unknown',
       dates:       quoteData.dates       || '',
@@ -46,6 +54,24 @@ exports.handler = async (event) => {
       children:    quoteData.children    || '',
       contactId:   contactId || null,    // GHL contact, when started from a lead
     };
+
+    if (existingId) {
+      // Preserve creation stamps + history across re-saves (best-effort: a
+      // failed read must never block Terri's save).
+      try {
+        const prev = await store.getJSON(existingId);
+        if (prev) {
+          record.createdAt = prev.createdAt || record.createdAt;
+          record.createdBy = prev.createdBy != null ? prev.createdBy : record.createdBy;
+          record._activity = Array.isArray(prev._activity) ? prev._activity : [];
+          if (record.contactId == null && prev.contactId) record.contactId = prev.contactId;
+        }
+      } catch {}
+      // 'markup_applied' is the only client hint we trust; everything else is an edit.
+      agents.appendActivity(record, activity === 'markup_applied' ? 'markup_applied' : 'edited', agent);
+    } else {
+      agents.appendActivity(record, 'created', agent);
+    }
 
     // setJSON returns the actual storage key (gist ID in prod, may differ from inputId for new quotes)
     const actualId = await store.setJSON(inputId, record);

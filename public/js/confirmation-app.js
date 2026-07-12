@@ -76,7 +76,7 @@ const ConfApp = (() => {
     p._baseTotal     = base.total; p._basePerPerson = base.pricePerPerson;
 
     refreshPreview();
-    if (state.confirmationId) saveLink(true);
+    if (state.confirmationId) saveLink(true, 'markup_applied');
     const btn = $('markup-apply-btn');
     if (btn) { btn.textContent = pct > 0 ? '✓ Applied' : '✓ Reset'; setTimeout(() => { btn.textContent = 'Apply'; }, 1800); }
   }
@@ -140,15 +140,14 @@ const ConfApp = (() => {
     }
   }
 
-  async function saveLink(silent) {
+  async function saveLink(silent, activityHint) {
     try {
       if (!silent) setLink(null);
       const body = { confirmationData: state.confirmationData, logoBase64: state.logoBase64 };
       if (state.confirmationId) body.confirmationId = state.confirmationId;
       if (state.leadContactId)  body.contactId      = state.leadContactId;
-      const res = await fetch('/.netlify/functions/save-confirmation', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-      });
+      if (activityHint)         body.activity       = activityHint;
+      const res = await window.IziAgent.agentFetch('/.netlify/functions/save-confirmation', body);
       let data = {};
       try { data = await res.json(); } catch { data = { error: `HTTP ${res.status}` }; }
       if (data.confirmationUrl) {
@@ -380,14 +379,12 @@ const ConfApp = (() => {
     const doMark = !!state.leadContactId &&
       confirm('Mark this booking confirmation as “Sent” in CRM?\nMoves the deal to Booking Confirmation Sent and updates the deal value to this amount.');
     if (doMark) {
-      fetch('/.netlify/functions/mark-confirmation-sent', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contactId:       state.leadContactId,
-          total:           confTotal(),
-          confirmationUrl: state.confirmationUrl,
-          name:            [(state.confirmationData && state.confirmationData.clientName) || '', (state.confirmationData && state.confirmationData.destination) || ''].filter(Boolean).join(' - '),
-        }),
+      window.IziAgent.agentFetch('/.netlify/functions/mark-confirmation-sent', {
+        contactId:       state.leadContactId,
+        confirmationId:  state.confirmationId,
+        total:           confTotal(),
+        confirmationUrl: state.confirmationUrl,
+        name:            [(state.confirmationData && state.confirmationData.clientName) || '', (state.confirmationData && state.confirmationData.destination) || ''].filter(Boolean).join(' - '),
       }).catch(() => {});
     }
   }
