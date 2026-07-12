@@ -116,9 +116,13 @@ tbody td{padding:13px 16px;font-size:13.5px;color:var(--gray-700);vertical-align
 
 <!-- Login view -->
 <div id="loginView">
-  <div class="login-card">
+  <div class="login-card" id="signingIn" style="display:none">
+    <h2>Signing you in…</h2>
+    <p>One moment — checking your saved PIN.</p>
+  </div>
+  <div class="login-card" id="loginCard">
     <h2>Admin Access</h2>
-    <p>Enter your password to view all quotes, confirmations, invoices and leads.</p>
+    <p>Enter your PIN or password to view all quotes, confirmations, invoices and leads.</p>
     <form id="loginForm">
       <div class="field">
         <label>Password</label>
@@ -322,8 +326,10 @@ async function loadAll(isLogin){
   if (q.unauthorised) {
     // Stored credential no longer valid (e.g. rotated) — forget it and show login.
     window.IziAgent.clearPin();
-    document.getElementById('loginErr').style.display='block';
-    document.getElementById('loginView').style.display='block';
+    document.getElementById('signingIn').style.display='none';
+    document.getElementById('loginCard').style.display='block';
+    document.getElementById('loginErr').style.display= isLogin ? 'block' : 'none';
+    document.getElementById('loginView').style.display='flex';
     document.getElementById('dashView').style.display='none';
     return;
   }
@@ -437,10 +443,16 @@ function exportCSV(){
 }
 
 // Auto-login with the remembered credential — one login per device, ever.
-// If it was rotated, loadAll falls back to the login form and clears it.
+// Hide the login form up front and show "Signing you in…" so it never
+// flashes; loadAll(false) reveals the form again only if the PIN is rejected.
 (function(){
   const saved = window.IziAgent.getPin();
-  if (saved) { adminPassword = saved; loadAll(true); }
+  if (saved) {
+    adminPassword = saved;
+    document.getElementById('loginCard').style.display='none';
+    document.getElementById('signingIn').style.display='block';
+    loadAll(false);
+  }
 })();
 </script>
 </body>
