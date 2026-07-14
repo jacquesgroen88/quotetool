@@ -100,6 +100,23 @@ async function findContactByEmail(email) {
   } catch { return null; }
 }
 
+// Digits only, leading zeros dropped, last 9 kept — so "082 365 3984",
+// "0823653984" and "+27823653984" all normalise to "823653984" (SA numbers).
+function normPhone(p) { return String(p || '').replace(/\D/g, '').replace(/^0+/, '').slice(-9); }
+
+async function findContactByPhone(phone) {
+  if (!enabled() || !phone) return null;
+  const norm = normPhone(phone);
+  if (norm.length < 7) return null; // too short to match safely
+  try {
+    const { status, json } = await ghReq('GET', `/contacts/?locationId=${LOCATION}&query=${encodeURIComponent(phone)}&limit=10`, null);
+    if (status < 200 || status >= 300) return null;
+    const list = (json && json.contacts) || [];
+    // Require an exact normalised phone match — no loose list[0] fallback, so we never mis-link.
+    return list.find(c => normPhone(c.phone) === norm) || null;
+  } catch { return null; }
+}
+
 async function findOpportunity(contactId) {
   const { status, json } = await ghReq('GET', `/opportunities/search?location_id=${LOCATION}&contact_id=${contactId}`, null);
   if (status < 200 || status >= 300) return null;
@@ -174,7 +191,7 @@ async function sendEmail(contactId, subject, htmlBody) {
 
 module.exports = {
   enabled, STAGES, FIELDS, LOCATION, PIPELINE, valueBand,
-  getContact, getCustomFieldMap, findOpportunity, findContactByEmail,
+  getContact, getCustomFieldMap, findOpportunity, findContactByEmail, findContactByPhone,
   moveToStage, addNote, addTags, setContactField, sendEmail,
   _raw: ghReq,
 };

@@ -73,6 +73,22 @@ exports.handler = async (event) => {
       agents.appendActivity(record, 'created', agent);
     }
 
+    // Backfill the GHL contactId when a quote was created WITHOUT a ?cid lead-prefill.
+    // Root cause of the "82% of quotes have no contactId" leak: fresh quotes (Terri types
+    // the client in) saved contactId=null, so they never linked to a GHL opp and stayed
+    // invisible to the pipeline (deal value R0, no quote->booking tracking, mark-quote-sent
+    // had nothing to move). We link to an EXISTING contact by email or phone — never create
+    // one (form leads already create the GHL contact via Make, so a lookup is the right join).
+    // Best-effort: a GHL failure must never block Terri's save.
+    if (!record.contactId && ghl.enabled()) {
+      try {
+        let match = null;
+        if (record.email) match = await ghl.findContactByEmail(record.email);
+        if (!match && record.phone) match = await ghl.findContactByPhone(record.phone);
+        if (match && match.id) record.contactId = match.id;
+      } catch {}
+    }
+
     // setJSON returns the actual storage key (gist ID in prod, may differ from inputId for new quotes)
     const actualId = await store.setJSON(inputId, record);
     const quoteId  = actualId || inputId;
